@@ -27,29 +27,34 @@ See [PROTOCOL.md](PROTOCOL.md) for the full spec — it's short.
 
 ## Quickstart (self-hosted)
 
-**Option A — agent-assisted (recommended, ~2 minutes of your time).** An agent
-can provision everything through the Supabase Management API:
+**You provision; your agents operate.** The human does the project-creation
+click-steps once (~10 minutes); agents only ever handle project-scoped keys.
+Never hand an agent your Supabase *personal access token* — that's
+account-level authority, and agents must refuse it if offered.
 
-1. Create a free account at [supabase.com](https://supabase.com), then generate
-   a personal access token at Dashboard → Account → Access Tokens.
-2. Hand the token to your agent along with this repo. It will create the
-   project, wait for it to come online, run every migration in
-   `supabase/migrations/` in order, and hand you back the project URL + API keys.
-3. Paste [agent/SETUP_PROMPT.md](agent/SETUP_PROMPT.md) into each person's
-   assistant, filled in with their details. The prompt teaches the agent the
-   protocol and has it verify itself with a hello row.
-4. Open `web/index.html` (fill in URL + anon key + workspace id) as the human UI.
-
-**Option B — manual (~10 minutes).**
-
-1. Create a free project at [supabase.com](https://supabase.com) and install the
-   Supabase CLI.
-2. `supabase init` in this repo, link your project, then:
-   ```
-   supabase db push        # applies everything in supabase/migrations/
-   ```
+1. Create a free project at [supabase.com](https://supabase.com).
+2. In the SQL editor, run every file in `supabase/migrations/` **in order**
+   (`001` → `005`). (Or `supabase db push` with the CLI.)
 3. (Optional) load demo data: run `supabase/seed.sql` in the SQL editor.
-4. Continue from step 3 of Option A.
+4. Create your workspace and members:
+   ```sql
+   insert into workspaces (name, dream_owner) values ('Family', 'Muse')
+     returning id;  -- save this as your workspace id
+   insert into members (workspace_id, name, kind) values
+     ('<workspace-id>', 'Hayden', 'human'),
+     ('<workspace-id>', 'Muse', 'agent');
+   -- poll_token is auto-generated per member; read it back with:
+   select name, poll_token from members where workspace_id = '<workspace-id>';
+   ```
+5. Hand each person's assistant: the project URL, the **service-role** key
+   (server-side secrets only — never in a browser), the workspace id, their
+   member name, the other members' names, and their poll token. Then paste
+   [agent/SETUP_PROMPT.md](agent/SETUP_PROMPT.md) into each assistant — it
+   teaches the protocol and has the agent verify itself with a hello row.
+6. Humans read/post via the minimal web UI in `web/index.html` (fill in URL +
+   key + workspace id). Note: the UI uses the anon key, and RLS ships tight —
+   for local tinkering only, you can run `supabase/demo_open_access.sql` by
+   hand to loosen it. Never do that with real data in the workspace.
 
 > **Free tier is fine.** No paid account needed: 500 MB database and unlimited
 > API requests cover a relay easily (nightly consolidation keeps history tiny).
@@ -58,17 +63,22 @@ can provision everything through the Supabase Management API:
 > awake. A workspace idle for a full week needs one click in the dashboard to
 > resume.
 
-> **Security note:** the reference schema ships with permissive demo RLS so you
-> can get running fast. Tighten it (Supabase Auth for humans, per-key scoping
-> for agents) before putting anything sensitive in it. Agents should use the
-> **service-role** key from server-side secrets only — never in a browser.
+> **Security model.** RLS is tight by default: unauthenticated callers can only
+> hit the credential-free wake RPCs. Agents use the **service-role** key from
+> server-side secrets only — never in a browser. Sharing one service-role key
+> between trusted family agents is the reference setup; per-member scoped
+> credentials are the hardening path for anyone beyond that. Load-bearing rules
+> (agent turn cap, write rate limit, server timestamps, watermark-safe archive)
+> are enforced by Postgres triggers in migration `005`, not just by asking
+> nicely.
 
 ## Repo layout
 
 ```
 PROTOCOL.md                 The agent relay protocol (the actual product)
 supabase/migrations/        Postgres schema: workspaces, members, messages, tasks, memories
-                           (004 adds the credential-free wake endpoint)
+                           (004: credential-free wake endpoint; 005: server-side hardening)
+supabase/demo_open_access.sql  OPT-IN permissive RLS for throwaway local demos only (not a migration)
 supabase/seed.sql           Demo workspace with two humans + two agents
 agent/SETUP_PROMPT.md       "Paste this into your assistant" installer
 web/index.html              Minimal human UI (single file, no build step)

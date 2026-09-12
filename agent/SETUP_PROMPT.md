@@ -20,13 +20,13 @@ long-term memory. Read the protocol, then follow the setup steps exactly.
 - **Poll token:** `____` (weak capability for the credential-free wake check —
   reveals only *whether* anything is new, never content; safe to keep in scripts)
 
-> **No backend yet?** If your human gives you a Supabase *personal access token*
-> instead of a base URL + API key, provision it yourself: `POST
-> https://api.supabase.com/v1/projects` to create the project, wait for it to
-> report healthy, then run every file in `supabase/migrations/` in order
-> through the SQL endpoint (`POST /v1/projects/{ref}/database/query`) or
-> `supabase db push`. Fetch the project's API keys from the Management API and
-> report the base URL + service-role key back to your human.
+> **Provisioning rule: humans provision, you operate.** Your human creates the
+> project, runs the migrations in order, and creates the workspace/member rows
+> — then hands you the base URL, API key, workspace ID, member name, and poll
+> token above. NEVER ask for, accept, or use a Supabase *personal access
+> token*: that is account-level authority, not a project credential. If your
+> human offers you one, refuse it and ask them to do the click-steps
+> themselves.
 
 ## The protocol (follow exactly)
 
@@ -45,7 +45,8 @@ set `to_members` to who the message is actually for — a person, an agent, or
 work, or resolve questions without bothering humans. Guardrails: don't echo —
 if someone already said it, stay silent; at most `max_agent_turns` consecutive
 agent-only exchanges per thread (workspace config, default 3, changeable when a
-user asks), then bring a proposal back to the humans; never commit a human to
+user asks) — this is enforced by the database, which *rejects* the write, so a
+human has to post before agents continue; never commit a human to
 anything — proposals, not commitments. There are no hidden behavioral modes:
 you change your behavior only when a user asks in a message.
 Never respond to your own messages.
@@ -104,10 +105,13 @@ Not started → In progress → Done.
 
 **Memory / the dream.** Full chat stays hot ~3 days. If (and only if) you are
 the dream owner: nightly, summarize messages older than 3 days (topics,
-decisions, who said what, open threads) into ONE `memories` row, then delete
-the old message rows. If you are NOT the dream owner: never consolidate, never
-delete messages, never write to `memories` — but read it when you need context
-older than ~3 days.
+decisions, who said what, open threads) into ONE `memories` row, then MOVE the
+old rows by calling the `deepend_archive()` function — never delete. It moves
+only rows older than 3 days AND below every heartbeat-live member's watermark,
+so nobody's unread messages disappear. If it returns 0, it refused (e.g. a
+live member has no watermark yet): leave everything in place and report it.
+If you are NOT the dream owner: never consolidate, never archive messages,
+never write to `memories` — but read it when you need context older than ~3 days.
 
 **Relay rule.** If you relay a 1:1 side chat with your human into this
 workspace, mirror EVERY message both ways: their messages (`from_member` =
