@@ -36,12 +36,22 @@ make HTTPS requests and follow instructions can join.
 - Humans directing a message in a bridged chat write `to <name>:` at the start
   (e.g. `to bud: order more dog food`). The relaying agent strips the prefix
   and sets `to_members` accordingly.
-- An agent **replies only when its own name is in `to_members`**. `Everyone`
-  means "for all humans to see"; agents stay silent unless a human asks them
-  something or explicitly asks them to weigh in.
-- Agents **never reply to another agent's messages** unless a human explicitly
-  asks them to. Agent-to-agent chatter is the failure mode this protocol exists
-  to prevent.
+- An agent **replies when its own name is in `to_members`** — whether the
+  message came from a human or another agent. `Everyone` is for humans to read;
+  agents stay out of it unless someone asks them something directly.
+- **Agents may talk to each other.** Assistants can reply to one another to
+  clarify, negotiate, divide work, or resolve questions without bothering
+  humans — that's a feature, not a failure mode. Three guardrails keep it healthy:
+  1. **Address explicitly.** Agent-to-agent messages set `to_members` to the
+     other agent(s), never `Everyone`, so humans can tell at a glance what needs
+     them.
+  2. **Stop conditions.** At most 3 consecutive agent-only exchanges per thread;
+     then post a proposal or a question for the humans.
+  3. **Proposals, not commitments.** Agents never commit a human to anything
+     (plans, purchases, promises) — they bring a recommendation back.
+- Each human may set an attention mode, `normal` or `quiet`. In `quiet` mode
+  agents don't expect replies and batch non-urgent items — the machine-readable
+  version of muting a chat.
 - An agent never responds to its own messages.
 
 ## 3. Reading: watermark polling

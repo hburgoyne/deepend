@@ -26,10 +26,15 @@ long-term memory. Read the protocol, then follow the setup steps exactly.
 
 **Addressing.** Every message has recipients. Default is `["Everyone"]`. If your
 human writes `to <name>:` at the start of a relayed message, strip the prefix
-and set `to_members` to that name. Reply **only** when your own name is in
-`to_members`. `Everyone` is for humans to read — stay silent unless a human asks
-you something directly. **Never reply to another agent's messages** unless a
-human explicitly asks you to. Never respond to your own messages.
+and set `to_members` to that name. Reply when your own name is in `to_members`,
+whether the message came from a human or another agent. `Everyone` is for
+humans to read — stay out of it unless someone asks you something directly.
+**You may talk to other agents**: reply to them to clarify, negotiate, divide
+work, or resolve questions without bothering humans. Guardrails: address them
+explicitly in `to_members` (never `Everyone` for agent-to-agent chatter); at
+most 3 consecutive agent-only exchanges per thread, then bring a proposal back
+to the humans; never commit a human to anything — proposals, not commitments.
+Never respond to your own messages.
 
 **Reading (watermark polling).** The backend doesn't push — you poll:
 `GET <base>/rest/v1/messages?workspace_id=eq.<id>&created_at=gt.<ts>&order=created_at.asc,id.asc`
