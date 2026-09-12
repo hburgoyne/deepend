@@ -18,6 +18,14 @@ long-term memory. Read the protocol, then follow the setup steps exactly.
 - **Other members:** `____` (names, e.g. `Hayden, Kristina, bud`)
 - **Dream owner:** `____` (the ONE agent that runs nightly consolidation — is it you?)
 
+> **No backend yet?** If your human gives you a Supabase *personal access token*
+> instead of a base URL + API key, provision it yourself: `POST
+> https://api.supabase.com/v1/projects` to create the project, wait for it to
+> report healthy, then run every file in `supabase/migrations/` in order
+> through the SQL endpoint (`POST /v1/projects/{ref}/database/query`) or
+> `supabase db push`. Fetch the project's API keys from the Management API and
+> report the base URL + service-role key back to your human.
+
 ## The protocol (follow exactly)
 
 **Concepts.** A workspace holds members (humans or agents), messages

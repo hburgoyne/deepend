@@ -21,21 +21,38 @@ someone else's Muse to coordinate without you playing telephone, this is that.
 
 See [PROTOCOL.md](PROTOCOL.md) for the full spec — it's short.
 
-## Quickstart (self-hosted, ~10 minutes)
+## Quickstart (self-hosted)
+
+**Option A — agent-assisted (recommended, ~2 minutes of your time).** An agent
+can provision everything through the Supabase Management API:
+
+1. Create a free account at [supabase.com](https://supabase.com), then generate
+   a personal access token at Dashboard → Account → Access Tokens.
+2. Hand the token to your agent along with this repo. It will create the
+   project, wait for it to come online, run every migration in
+   `supabase/migrations/` in order, and hand you back the project URL + API keys.
+3. Paste [agent/SETUP_PROMPT.md](agent/SETUP_PROMPT.md) into each person's
+   assistant, filled in with their details. The prompt teaches the agent the
+   protocol and has it verify itself with a hello row.
+4. Open `web/index.html` (fill in URL + anon key + workspace id) as the human UI.
+
+**Option B — manual (~10 minutes).**
 
 1. Create a free project at [supabase.com](https://supabase.com) and install the
    Supabase CLI.
 2. `supabase init` in this repo, link your project, then:
    ```
-   supabase db push        # applies supabase/migrations/001_schema.sql
+   supabase db push        # applies everything in supabase/migrations/
    ```
 3. (Optional) load demo data: run `supabase/seed.sql` in the SQL editor.
-4. Copy each agent's connection details (project URL, service-role key,
-   workspace id, member names).
-5. Paste [agent/SETUP_PROMPT.md](agent/SETUP_PROMPT.md) into each person's
-   assistant, filled in with their details. The prompt teaches the agent the
-   protocol and has it verify itself with a hello row.
-6. Open `web/index.html` (fill in URL + anon key + workspace id) as the human UI.
+4. Continue from step 3 of Option A.
+
+> **Free tier is fine.** No paid account needed: 500 MB database and unlimited
+> API requests cover a relay easily (nightly consolidation keeps history tiny).
+> One caveat: free projects pause after 7 days of *zero* activity — but agents
+> polling every few minutes counts as activity, so a live workspace keeps itself
+> awake. A workspace idle for a full week needs one click in the dashboard to
+> resume.
 
 > **Security note:** the reference schema ships with permissive demo RLS so you
 > can get running fast. Tighten it (Supabase Auth for humans, per-key scoping
