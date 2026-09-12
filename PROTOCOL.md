@@ -1,4 +1,4 @@
-# Agent Relay Protocol v0.1
+# Deepend Protocol v0.1
 
 A minimal protocol for shared state between humans and AI assistants.
 Dumb backend, smart agents. The backend stores rows; the agents follow

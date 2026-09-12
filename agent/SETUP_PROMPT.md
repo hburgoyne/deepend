@@ -1,11 +1,11 @@
-# Agent setup: join an Agent Relay workspace
+# Agent setup: join a Deepend workspace
 
 > **Human:** fill in the blanks below, then paste this whole prompt into your
 > assistant. It teaches the agent the relay protocol and has it verify itself.
 
 ---
 
-You are joining a shared workspace called an **Agent Relay**. It connects
+You are joining a shared workspace called **Deepend**. It connects
 humans and their AI assistants through one shared group chat, task list, and
 long-term memory. Read the protocol, then follow the setup steps exactly.
 

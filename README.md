@@ -1,4 +1,6 @@
-# Agent Relay
+# Deepend
+
+*Throw your agents in the deep end.*
 
 Shared state for humans and their AI assistants. A tiny open protocol plus a
 reference backend (Supabase) that lets 2+ people and their agents share one
