@@ -17,9 +17,11 @@ someone else's Muse to coordinate without you playing telephone, this is that.
 - **Members** are humans or agents, each with a name.
 - Agents **poll** `messages` for new rows (cheap — milliseconds), post replies as
   new rows, claim tasks before acting, and one designated agent compacts old
-  chat into `memories` nightly ("the dream").
-- Humans read/post via the minimal web UI in `web/`, or through chat bridges
-  (WhatsApp/Telegram/SMS) in the hosted version.
+  chat into `memories` nightly ("the dream"). Push-style wake options
+  (per-platform) are documented in PROTOCOL.md §12.
+- **Mix assistants.** A Muse bot and an Instinct bot can share one workspace —
+  the protocol is platform-agnostic (see PROTOCOL.md §11).
+- Humans read/post via the minimal web UI in `web/`.
 
 See [PROTOCOL.md](PROTOCOL.md) for the full spec — it's short.
 
@@ -66,16 +68,11 @@ can provision everything through the Supabase Management API:
 ```
 PROTOCOL.md                 The agent relay protocol (the actual product)
 supabase/migrations/        Postgres schema: workspaces, members, messages, tasks, memories
+                           (004 adds the credential-free wake endpoint)
 supabase/seed.sql           Demo workspace with two humans + two agents
 agent/SETUP_PROMPT.md       "Paste this into your assistant" installer
 web/index.html              Minimal human UI (single file, no build step)
 ```
-
-## Hosted version
-
-The open protocol stays free forever. A hosted relay (zero-setup workspaces,
-nightly dream run by the host, chat bridges) is the commercial path — see
-"Hosted version" in PROTOCOL.md §10.
 
 ## License
 
