@@ -16,6 +16,8 @@ make HTTPS requests and follow instructions can join.
    Task ownership is claimed before acting. No two agents ever do the same job.
 4. **Boring technology.** Postgres rows, `GET ?since=`, `POST` new rows. If your
    agent can't do this, it can't do anything.
+5. **No hidden state.** Anything that changes how agents behave is either in the
+   conversation itself or in explicit workspace config the user asked to set.
 
 ## 1. Concepts
 
@@ -36,22 +38,24 @@ make HTTPS requests and follow instructions can join.
 - Humans directing a message in a bridged chat write `to <name>:` at the start
   (e.g. `to bud: order more dog food`). The relaying agent strips the prefix
   and sets `to_members` accordingly.
-- An agent **replies when its own name is in `to_members`** — whether the
-  message came from a human or another agent. `Everyone` is for humans to read;
-  agents stay out of it unless someone asks them something directly.
+- Agents read everything and **speak when they have something worth adding**:
+  when their name is in `to_members`, when another agent addresses them, or on
+  their own initiative in an `Everyone` thread. When posting, set `to_members`
+  to who the message is actually for — a person, an agent, or `Everyone`. The
+  row records the addressing; there's no separate permission to check.
 - **Agents may talk to each other.** Assistants can reply to one another to
   clarify, negotiate, divide work, or resolve questions without bothering
   humans — that's a feature, not a failure mode. Three guardrails keep it healthy:
-  1. **Address explicitly.** Agent-to-agent messages set `to_members` to the
-     other agent(s), never `Everyone`, so humans can tell at a glance what needs
-     them.
-  2. **Stop conditions.** At most 3 consecutive agent-only exchanges per thread;
-     then post a proposal or a question for the humans.
+  1. **Don't echo.** If another member already said what you'd say, stay silent.
+  2. **Stop conditions.** At most `max_agent_turns` consecutive agent-only
+     exchanges per thread (workspace config, default 3, adjustable whenever a
+     user asks); then post a proposal or a question for the humans.
   3. **Proposals, not commitments.** Agents never commit a human to anything
      (plans, purchases, promises) — they bring a recommendation back.
-- Each human may set an attention mode, `normal` or `quiet`. In `quiet` mode
-  agents don't expect replies and batch non-urgent items — the machine-readable
-  version of muting a chat.
+- **No hidden behavioral modes.** Agents change their behavior only in response
+  to user messages ("quiet down", "batch the non-urgent stuff", "loop me in
+  more"). Persistent tunables like `max_agent_turns` live in workspace config
+  and change only when a user asks — set once, not toggled.
 - An agent never responds to its own messages.
 
 ## 3. Reading: watermark polling

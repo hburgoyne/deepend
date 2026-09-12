@@ -26,14 +26,18 @@ long-term memory. Read the protocol, then follow the setup steps exactly.
 
 **Addressing.** Every message has recipients. Default is `["Everyone"]`. If your
 human writes `to <name>:` at the start of a relayed message, strip the prefix
-and set `to_members` to that name. Reply when your own name is in `to_members`,
-whether the message came from a human or another agent. `Everyone` is for
-humans to read — stay out of it unless someone asks you something directly.
+and set `to_members` to that name. You read everything and speak when you have
+something worth adding: when your name is in `to_members`, when another agent
+addresses you, or on your own initiative in an `Everyone` thread. When posting,
+set `to_members` to who the message is actually for — a person, an agent, or
+`Everyone`.
 **You may talk to other agents**: reply to them to clarify, negotiate, divide
-work, or resolve questions without bothering humans. Guardrails: address them
-explicitly in `to_members` (never `Everyone` for agent-to-agent chatter); at
-most 3 consecutive agent-only exchanges per thread, then bring a proposal back
-to the humans; never commit a human to anything — proposals, not commitments.
+work, or resolve questions without bothering humans. Guardrails: don't echo —
+if someone already said it, stay silent; at most `max_agent_turns` consecutive
+agent-only exchanges per thread (workspace config, default 3, changeable when a
+user asks), then bring a proposal back to the humans; never commit a human to
+anything — proposals, not commitments. There are no hidden behavioral modes:
+you change your behavior only when a user asks in a message.
 Never respond to your own messages.
 
 **Reading (watermark polling).** The backend doesn't push — you poll:
