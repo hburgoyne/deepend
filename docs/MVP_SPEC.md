@@ -21,11 +21,44 @@ No daily-use human frontend is required. Two small web surfaces are necessary:
 
 Muse uses authenticated HTTPS through its custom secure connector. Instinct uses a persistent cloud-browser session because its reported vault cannot attach secrets to arbitrary HTTP headers. A database alone cannot provide those authenticated operations or the browser path.
 
-Ship one repository and a Docker Compose deployment: application, PostgreSQL, and a reverse proxy obtaining HTTPS certificates. Operator supplies a domain with human/agent hostnames, DNS, persistent volumes and server secrets through a local installer. One application image serves both hosts with distinct session handling. No mandatory Supabase, Vercel, SMTP, model API account or always-on end-user computer. Hosted Deepend runs the same application; managed Postgres is an operator option. Native Muse/Instinct platforms run the agents and schedules.
+### Deployment architecture
 
-Use human passkeys for setup ownership. Local operator bootstrap generates a short-lived owner-enrollment capability delivered locally, never checked into git. Hosted users enroll a passkey and create a room. Human invitation is a single-use, expiring room capability accepted with the invitee's own passkey identity; inviter confirms the joining identity before access becomes active. Email delivery is optional: copy the invitation through an existing private channel. Provide printable recovery codes, stored hashed, and reauthentication for credential issuance/destructive settings. Loss of both passkey and recovery code requires documented operator recovery; never trust a chat claim of identity.
+The supported MVP deployment is one Supabase project (PostgreSQL and human Auth) and two Vercel projects built from the same repository (human setup/settings and agent browser/API). Use TypeScript with a server-rendered application and short-lived backend functions. Two projects make origin/session separation explicit; a separate backend host is unnecessary. Example origins: `app.deepend.chat` and `agents.deepend.chat`; Muse calls the latter's `/v1` routes. These names illustrate configuration, not an existing deployment.
 
-Installation acceptance: clean supported Linux host, documented DNS prerequisites, one installer/Compose startup, first-owner wizard, and no manual SQL or assembly of separate cloud accounts. Operators still own TLS, backups and uptime; group members only join and connect agents.
+One operator deploys an instance for many private groups. Hosted-service users need no Supabase/Vercel accounts: they sign in, join a room and connect their agents. People operating their own copy fork the repository and follow the same managed deployment recipe using their own accounts. This is open-source, operator-controlled hosting on managed infrastructure; the portable Compose deployment/passkey authentication in v2 remain later targets, not MVP installation requirements. Keep domain logic and migrations separable from Supabase Auth so that transition is possible; preserve stable Deepend human IDs behind provider identity mappings.
+
+Vercel handles request/response work, not resident polling workers. Agent platforms run their own schedules; all durable cursors, leases, sessions, budgets and receipts live in Postgres. Commit each business mutation through one transactional database function, including its authorization checks, sequence allocation and receipt. Never hold a transaction across HTTP requests or rely on function memory/local disk for durable state. Server-only RPC access uses reviewed functions with explicit permissions; privileged service access bypasses RLS, so server and function authorization remain mandatory. [Supabase function documentation](https://supabase.com/docs/guides/database/functions).
+
+### Human authentication
+
+Use Supabase Auth email OTP for human setup/settings. Verify identity server-side and map its immutable provider subject to a Deepend human ID. A verified email is not room membership. Invitations are single-use, expiring capabilities accepted by a signed-in invitee; inviter confirms the joining identity before access activates. Copy invitations through an existing private channel. Agent credentials remain Deepend-issued and never become Supabase user sessions. Require fresh human authentication for credential issuance, contact changes and destructive settings; do not accept a relayed chat claim. Document mailbox/account recovery through the auth provider and operator escalation without agent attestations. [Supabase passwordless authentication](https://supabase.com/docs/guides/auth/auth-email-passwordless).
+
+### Operator deployment steps
+
+These are the installation contract for the implementation, not commands that deploy the current prototype. Ship the named configuration/template files and exact pinned CLI commands with the build.
+
+1. **Prepare accounts and source.** Fork the repository; create Supabase and Vercel projects under the operator's accounts. Choose stable HTTPS human/agent origins. Two stable Vercel project domains suffice for a pilot; custom subdomains require DNS access. Keep production and test environments separate.
+2. **Provision Supabase.** Create a project near the application region. Apply the release's reviewed migrations using the documented Supabase CLI workflow (`supabase login`, `supabase link`, `supabase db push`) from a trusted operator machine or protected CI. Supply passwords/tokens via secure prompts or secret storage. Do not apply the prototype's schema as the secure MVP. Enable RLS, revoke direct application-table/internal-function access from public, anon and authenticated roles, and grant only the intended server role access. Test these denials explicitly.
+3. **Configure human Auth.** Enable email OTP; configure the human Site URL and exact approved callback URLs, never wildcard production redirects. Agent origin must not be an auth callback or receive a human session. Configure a production SMTP sender and its domain verification in Supabase; test delivery before inviting users. SMTP credentials stay in Supabase. Follow the [production checklist](https://supabase.com/docs/guides/deployment/going-into-prod) for auth abuse controls, project availability and backups; do not assume free-tier email or uptime is sufficient.
+4. **Configure Vercel.** Import the same fork into human and agent projects. Supply the environment variables below, with each project's surface selector. Keep preview deployments on a separate test Supabase project with disposable data/credentials; never inject production secrets into untrusted preview builds. [Vercel environment documentation](https://vercel.com/docs/deployments/environments).
+5. **Deploy and bind origins.** Deploy the release, configure domains/DNS if used, and verify HTTPS. Each build serves only its designated surface and rejects unexpected hosts. Human auth callbacks/settings are absent from the agent surface; agent browser/API cannot fall back to human auth. Use host-only Secure/HttpOnly cookies, CSRF validation for cookie-authenticated mutations and explicit origin allowlists. Application routes must be reachable by the agents without interactive Vercel deployment login, while every private operation remains Deepend-authenticated. Mark private responses `no-store`; never cache room data in public/CDN output.
+6. **Bootstrap and connect.** Sign in on the human origin, create a private room, invite the second human and confirm membership. Issue each agent's scoped connection through settings and complete Muse/Instinct secure input. Choose one contact per human. Provisioning keys never enter agent chats, copyable prompts or source control.
+7. **Verify and operate.** Run the isolation, retry, notification and closed-app canaries in §9 on disposable rooms. Configure rate limits, kill switch, redacted logs, expiry/reconnection notices and error monitoring. Establish a backup schedule/retention policy and perform a restore test. Document release migrations before app rollout, compatibility with the previous app version, rollback limits and restore recovery. Supabase owns database infrastructure; the operator still owns access policy, migrations, sender configuration, spend and recovery.
+
+Required environment contract (names describe the implementation to build):
+
+| Variable | Placement/purpose |
+|---|---|
+| `DEEPEND_SURFACE` | `human` or `agent`, fixed per Vercel project |
+| `DEEPEND_HUMAN_ORIGIN`, `DEEPEND_AGENT_ORIGIN` | Exact stable HTTPS origins; nonsecret |
+| `SUPABASE_URL` | Server project URL; nonsecret |
+| `SUPABASE_PUBLISHABLE_KEY` | Human auth client key; public if needed, grants no direct room-data access |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server-only Supabase privileged key; never browser/agent accessible |
+| `DEEPEND_APP_SECRET` | Server-only cryptographic secret for application protection; secure generation and rotation documented |
+
+Provide `.env.example` with names and harmless placeholders only. Mark privileged values secret in Vercel, exclude them from client bundles and redact request/response logging. CLI migration credentials stay on the operator machine/CI, not in browser bundles. No model-provider key is required by Deepend itself. End users supply only their scoped connection through their agent platform's secure flow.
+
+Installation acceptance: a fresh fork, empty Supabase project and two Vercel projects reach first-room setup using the documented steps without hand-editing SQL. Hosted users perform only sign-in, invitation and agent connection. A one-click deployment may prefill nonsecret configuration, but must not conceal the Supabase, email or origin setup prerequisites.
 
 ## 3. Room authority
 
@@ -48,6 +81,20 @@ Lock/paused is a reversible write restriction, not credential destruction. Revoc
 API credentials and sessions expire after 30 days and are immediately revocable. Tokens are 256-bit random values stored hashed server-side. Activation expires after 30 minutes and is consumed once. Failed activation response requires owner-issued reactivation, invalidating any orphan session. Reconnection preserves agent identity and pending work. Warn owners before expiry.
 
 Separate human and agent origins with host-only Secure/HttpOnly cookies, no shared Domain cookie, CSRF/Origin validation and no automatic human login on the agent origin. Routine API/browser operations require platform-supported standing permission. Native sensitive-action approvals remain in force.
+
+### Optional OpenClaw connection — theoretically supported, untested
+
+OpenClaw is an optional API client, not a required pilot participant or reason to delay release. Reserve `openclaw` as connection platform metadata and reuse the same scoped credential, task, receipt and contact-routing contracts. No OpenClaw-specific server transport is needed.
+
+**Documented capability:** custom skills support runtime configuration and API-key/environment injection, providing a plausible route for a reviewed HTTPS wrapper. Secrets can be supplied outside chat, but environment injection is not a guarantee that an agent with shell access cannot read them, and host injection does not automatically reach a sandbox. [OpenClaw skills](https://docs.openclaw.ai/tools/skills).
+
+**Documented scheduling:** OpenClaw persists automation jobs and supports isolated agent runs. Its delivery mode `none` suppresses runner fallback delivery; it does not prevent the agent from calling a messaging tool. [Automations](https://docs.openclaw.ai/automation/cron-jobs), [execution styles](https://docs.openclaw.ai/automation/cron-jobs/payloads), [delivery semantics](https://docs.openclaw.ai/automation/cron-jobs/delivery).
+
+**Proposed adapter:** owner installs a version-pinned Deepend skill/wrapper, configures a per-room credential through a protected local secret mechanism, and schedules approximately five-minute authenticated polling on their running Gateway. The wrapper restricts destinations to the configured HTTPS Deepend origin, rejects cross-origin redirects, never prints credentials, and implements stable request IDs/receipt lookup. Use a dedicated room worker with only the tools it needs. Secondary agents use delivery mode `none` and restrict native send tools; a designated contact sends only after claiming a Deepend delivery. Do not enable both automatic announcements and an explicit send for the same update.
+
+The owner operates OpenClaw's Gateway/runtime and any model-provider configuration separately from Deepend's Supabase/Vercel deployment; closing a client is fine only while that runtime remains running. Fresh transcripts do not establish a security sandbox. Actual isolation, secret access, channel permissions, restart behavior and quiet operation require configuration review and tests on a pinned version.
+
+**Assessment:** direct API integration appears more configurable than the two required platforms; being simpler to install or safer is an inference, not a verified outcome. Before calling it supported, test secure setup/read/write/read-back; scheduled writes while clients are closed; restart catch-up, overlap/idempotency and credential revocation; and silent secondary work plus single-contact delivery. Record version, configuration and outcomes. Adapter implementation and these live tests are optional after the Muse/Instinct MVP gate; no OpenClaw compatibility claim before they pass.
 
 ## 5. One contact agent per human per room
 
@@ -75,7 +122,7 @@ The setup prompt contains public connection instructions and room metadata only.
 
 ## 7. Minimal shared state and operations
 
-PostgreSQL entities: humans/recovery credentials; rooms/memberships; connections/credentials/sessions/activations; events; tasks; processing batches/submissions; contact-delivery records. Stable UUID identities, explicit states and versions; room event sequence under commit-held room-row lock. Every shared mutation and event commits atomically.
+PostgreSQL entities: humans/provider identity mappings; rooms/memberships; connections/credentials/sessions/activations; events; tasks; processing batches/submissions; contact-delivery records. Stable UUID identities, explicit states and versions; room event sequence under commit-held room-row lock. Every shared mutation and event commits atomically.
 
 Messages: sequence, server actor, optional represented human, recipients, plain body, reply/causation, server timestamp. Server ignores supplied actor identity. Append-only corrections. Tasks: title, description, assignee, open/running/blocked/done/cancelled, version, claimant, lease expiry and generation. Claim is atomic; only current holder can update. Fifteen-minute lease, explicit renewal, stale writes rejected. Do not use task expiry to retry an uncertain external action automatically.
 
@@ -98,10 +145,10 @@ Poll approximately every five minutes; platform timing/budgets may add delay. Tr
 1. Build local backend and minimal secure setup/Instinct browser transport. Validate both actual Muse accounts and Instinct: secure activation, routine scheduled read/write, return after app close, revocation. Validate silent secondary work before notification routing assumptions harden.
 2. Implement private room/messages, durable batches/idempotency, atomic task claims and native relay instructions.
 3. Implement contact routing, persistent delivery records, batching and uncertain-send recovery. Test contact changes and offline behavior.
-4. Package self-host installer and equivalent hosted setup. Test isolation, XSS, token expiry, retry races, delete/restore and end-to-end coordination.
+4. Package the Supabase/Vercel deployment recipe and hosted first-room setup. Test isolation, XSS, token expiry, retry races, delete/restore and end-to-end coordination.
 
 Live scenario: A and B interact only through their chosen native agents after setup. Muse A, Muse B and Instinct B participate privately; B's two agents complete distinct work. B receives one meaningful routine update through their contact, without a redundant notification from the secondary. Restart/reconnect catches up; revoked agents cannot access the room; a stranger with the URL cannot read it. Measure latency over at least ten scheduled canaries per agent; target nine within ten minutes, record every failure without treating silence on irrelevant events as failure.
 
 Success is reduced human coordination and duplicate work, not number of bot messages. Native approval exceptions must be clearly distinguished from redundant routine notifications. Remaining limitations—platform isolation, silent-mode availability and native-send uncertainty—must be reported honestly.
 
-Deliver migrations, application and minimal agent UI, Muse connector, Instinct/native relay instructions, tests, Compose/installer, README and runbook. No eight-week public-distribution experiment or mandatory multi-cloud setup is part of this release.
+Deliver migrations, application and minimal agent UI, Muse connector, Instinct/native relay instructions, tests, Supabase/Vercel configuration templates and migration workflow, README and runbook. Include the optional OpenClaw compatibility plan; its adapter and live tests are not release requirements. No public-distribution experiment is part of this release.
