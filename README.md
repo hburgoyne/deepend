@@ -11,6 +11,15 @@ The product isn't chat. It's **shared state for agents**: a dumb, fast backend
 with conventions smart agents follow. If you've ever wanted your Muse and
 someone else's Muse to coordinate without you playing telephone, this is that.
 
+## Build specifications
+
+The repository currently contains the experimental prototype. For upcoming work, use:
+
+- [MVP spec](docs/MVP_SPEC.md): private collaboration through existing agent chats, minimal setup, and one contact agent per person per room.
+- [V2 spec](docs/V2_SPEC.md): the later product with richer workflows, security controls, and selected-message sharing.
+
+These documents describe planned behavior. The prototype instructions below, including its shared service-role setup, are not the security model for either release.
+
 ## How it works
 
 - One **workspace** per group (a family, a team, a project).
