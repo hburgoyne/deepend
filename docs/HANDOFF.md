@@ -1,30 +1,29 @@
-# Resume handoff — 14 September 2026
+# Resume handoff — 13 September 2026 (Claude Code session)
 
-Remote branch: `mvp-build`. TypeScript and all 13 PGlite/HTTP tests pass. Implementation, migration, connector guides, deployment instructions and operator runbook are committed.
+Remote branch: `mvp-build`. This file supersedes earlier handoff notes where they conflict.
 
-## Cloud state
+## Verified evidence
 
-- User explicitly approved creating the project in the **Deepend** Supabase organization (`zpusjsoujycdacmnatke`). Cost returned and confirmed through provisioning: **$0/month**.
-- Project: `deepend-mvp`, ref `sxqrjbcylksyfyiebvqp`, region `us-west-1`, status ACTIVE_HEALTHY.
-- Applied migration `deepend_mvp` from `supabase/migrations/202609130001_mvp.sql` using Supabase migration tool. Do not reapply its CREATE statements. Inspect remote migration history before future CLI synchronization.
-- Hosted checks: 15 private tables, all RLS enabled; anon and authenticated cannot execute `deepend_call`; service_role can; invalid agent credential returns unauthorized.
-- Security advisor: only INFO `rls_enabled_no_policy` notices for the private schema. Default-deny direct client access is intentional; do not add permissive policies to silence these notices.
-- Vercel accepted two production deployments from the committed application files (no secrets embedded):
-  - Human: `dpl_GSo8NJst22r7tnEpbfffNXsrobW3`; alias `deepend-human-hayden-burgoynes-projects-4136bcc3.vercel.app`.
-  - Agent: `dpl_HHxUS6761L8GmNKwfnVW9GUepPPq`; alias `deepend-agents-hayden-burgoynes-projects-4136bcc3.vercel.app`.
-- Initial state was INITIALIZING. Build readiness is **not verified**. Vercel inspection returned 403 for scope `hayden-burgoynes-projects-4136bcc3`, team ID `team_3ULeCfffk7tcKFZGa2KbrQtp`, requesting reauthentication to that scope. Reconnect with authorized scope before further inspection/configuration; do not bypass it.
-- Environment variables have not been configured. The application intentionally returns configuration_required until they are supplied. No live site functionality, SMTP setup or native-agent canary is claimed.
-- These were file-based deployments, not a verified Git-linked auto-deploy setup. Do not assume later Git pushes deploy automatically.
+- Commit `2ff9e49` (native Express entrypoint fix) is on `origin/mvp-build`. GitHub Actions `check` on that commit: **success**.
+- Local re-run: `tsc --noEmit` passes; 13/13 tests pass under Node 24.21 (8 database, 5 HTTP). Under Node 23.11 `tests/database.test.ts` hangs; use Node 24 (`.nvmrc`), matching `engines` and Vercel.
+- Supabase (from earlier session, not re-verified here): org `zpusjsoujycdacmnatke`, project `deepend-mvp` / `sxqrjbcylksyfyiebvqp`, us-west-1, $0/month, MVP migration applied, 15 private RLS tables, anon/authenticated RPC denied, service_role allowed. Do not reapply the CREATE migration; inspect remote history before CLI migration tooling.
+
+## Not yet verified / blocked
+
+- **Vercel**: user reports both projects (`deepend-human`, `deepend-agents`, team `hayden-burgoynes-projects-4136bcc3`, `team_3ULeCfffk7tcKFZGa2KbrQtp`) are now Git-connected. Production branch, framework, root directory and Output Directory override are unverified. As of this session GitHub lists **no Vercel deployments or checks** for any commit, so the fix has never been built on Vercel. The original file-upload deployments failed ("No entrypoint found in output directory: public") and must not be redeployed.
+- Local Vercel CLI default login is a different account (`hayden-usfolks`, team `hayden-burgoynes-projects`) and cannot see these projects. An isolated login (`vercel login --future -Q ~/.vercel-deepend`) was started twice; both device codes expired unapproved. Retry when the owner is present, then use `-Q ~/.vercel-deepend --scope hayden-burgoynes-projects-4136bcc3` for all commands.
+- Local Supabase CLI login is the Us Folks org and cannot see `deepend-mvp`.
+- Claude in Chrome extension was not connected.
+- Environment variables, Supabase email OTP template/SMTP, cron, hosted auth, and all live agent behavior: not configured / not verified.
 
 ## Next actions
 
-1. Configure Supabase email OTP template and SMTP; inspect supported secure credential transfer to Vercel. Existing Supabase tools expose publishable keys but no general secret-key/auth-configuration operation was discovered. Use supported provider setup; do not extract internal platform secrets through SQL.
-2. Reauthenticate the Vercel integration for the identified scope, inspect both existing deployments, configure server-only environment variables and exact origins using the aliases above, then redeploy. Verify Git linkage if desired and test cron authorization/cleanup.
-3. Run hosted concurrency, HTTP, Auth and restore checks, then connect the actual Muse A, Muse B and Instinct B through each owner's secure platform flow.
-4. Test closed-app scheduled writes, silent secondary work, notification uncertainty and contact switching. Update BUILD_STATUS.md with evidence; do not equate automated tests with platform compatibility.
+1. Owner approves Vercel device login for the correct account. Then per project: confirm Git repo link and set production branch `mvp-build`; framework Express, root `.`, Node 24.x, no Output Directory override.
+2. Deploy `mvp-build` HEAD via Git, inspect build logs, confirm `/` returns 503 `configuration_required` (expected before env vars).
+3. Set server-only env vars per DEPLOY.md. Generate `DEEPEND_APP_SECRET` / `CRON_SECRET` and pipe directly into `vercel env add` (never print). Supabase URL/keys: owner enters them in Vercel settings, or pipe from an authorized Supabase CLI without printing.
+4. Owner configures Supabase Magic Link template with `{{ .Token }}`, 10-minute OTP expiry, custom SMTP, Site URL = human origin.
+5. Redeploy; verify human OTP login, 401 on unauthorized `/internal/maintenance`, host separation, then room/invite/agent activation and live canaries per BUILD_STATUS.md.
 
 ## Git and implementation notes
 
-Git CLI reads work; HTTPS push lacked credentials. GitHub connector tree/commit/branch/ref operations publish successfully. Use the latest remote commit as parent and never force-update. Local history may differ despite identical tree contents; synchronize carefully. Large uploads need chunked reads to avoid tool truncation.
-
-Dispatcher uses an instance control-row lock for pilot simplicity; measure hosted contention. Native notifications cannot be guaranteed exactly-once. Audit retention needs the deployed maintenance cron. Muse's proprietary surrogate-helper installation remains an in-platform step. See API.md, RUNBOOK.md and connector guides for operating contracts.
+Git push over the local credential helper works from this machine. Never force-update. Dispatcher uses an instance control-row lock for pilot simplicity; measure hosted contention. Native notifications cannot be guaranteed exactly-once. Audit retention needs the deployed maintenance cron. Muse's proprietary surrogate-helper installation remains an in-platform step. See API.md, RUNBOOK.md and connector guides.
