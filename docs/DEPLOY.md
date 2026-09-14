@@ -12,7 +12,7 @@ Use a **fresh Supabase project**. This release does not migrate a live prototype
 
 ## 2. Two Vercel projects
 
-Import this repository twice, using the implementation branch (`mvp-build` initially) as each project's production branch. Framework: **Other**. Node: **24.x**. Install: `npm ci`. Build: `npm run build`. Output: `public`. Keep the repository root as project root. `api/index.ts` is the Node function and `vercel.json` routes all requests to it.
+Import this repository twice, using the implementation branch (`mvp-build` initially) as each project's production branch. Framework: **Express**. Node: **24.x**. Install: `npm ci`. Build: `npm run build`. Output Directory: leave the override disabled (the backend entrypoint is at the repository root, not in `public`). Keep the repository root as project root. `index.ts` exports the Express application. Vercel handles native Express routing; do not add a catch-all rewrite to `/api/index`.
 
 Use stable production aliases such as `deepend-human.vercel.app` and `deepend-agents.vercel.app`; a custom domain is optional. Set these exact origins in both projects before testing. Do not allow preview URLs to access the production database.
 
