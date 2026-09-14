@@ -1,37 +1,32 @@
 # Resume handoff — 13 September 2026 (Claude Code session)
 
-Remote branch: `mvp-build`. This file supersedes earlier handoff notes where they conflict.
+Remote branch: `mvp-build`. This file supersedes earlier handoff notes.
 
-## Verified evidence
+## Verified state
 
-- Commit `2ff9e49` (native Express entrypoint fix) is on `origin/mvp-build`. GitHub Actions `check` on that commit: **success**.
-- Local re-run: `tsc --noEmit` passes; 13/13 tests pass under Node 24.21 (8 database, 5 HTTP). Under Node 23.11 `tests/database.test.ts` hangs; use Node 24 (`.nvmrc`), matching `engines` and Vercel.
-- Supabase (from earlier session, not re-verified here): org `zpusjsoujycdacmnatke`, project `deepend-mvp` / `sxqrjbcylksyfyiebvqp`, us-west-1, $0/month, MVP migration applied, 15 private RLS tables, anon/authenticated RPC denied, service_role allowed. Do not reapply the CREATE migration; inspect remote history before CLI migration tooling.
+**Code.** GitHub Actions `check` passed on `2ff9e49`. Local: `tsc --noEmit` passes; 13/13 tests pass on Node 24.21. `tests/database.test.ts` hangs on Node 23.11 — use Node 24 (`.nvmrc`).
 
-## Not yet verified / blocked
+**Vercel** (team `hayden-burgoynes-projects-4136bcc3`, `team_3ULeCfffk7tcKFZGa2KbrQtp`, Hobby):
+- `deepend-human` (`prj_4CQPj06Totk2TJaZHS6EpSKjvQW1`) and `deepend-agents` (`prj_0oZS7HZqc7q51xNunjqN0jFPy53a`): Git-linked to `hburgoyne/deepend`, production branch `mvp-build` (verified: pushes create Production deployments), framework express, Node 24.x. Builds succeed.
+- Public production origins: `https://deepend-human.vercel.app`, `https://deepend-agents.vercel.app`. The `…-hayden-burgoynes-projects-4136bcc3.vercel.app` aliases and previews are behind Vercel SSO (302) — never use them as origins.
+- Production-only env vars on both, verified by `vercel env ls`: `DEEPEND_SURFACE`, `DEEPEND_HUMAN_ORIGIN`, `DEEPEND_AGENT_ORIGIN`, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` (`sb_publishable_…`), `DEEPEND_ALLOWED_EMAILS` (3 pilot addresses), Sensitive `DEEPEND_APP_SECRET` and `CRON_SECRET` (generated in-shell, piped via stdin, identical across projects, never printed), Sensitive `SUPABASE_SERVICE_ROLE_KEY` (entered by owner). Preview env has none, so previews cannot reach production data.
+- Live HTTP checks after deploying `2e95be6`: both `/` → 200 HTML; `/health` → `{"surface":"human|agent","status":"configured"}`; `/internal/maintenance` without secret → 401 on both; agent `/events` with no or invalid bearer → 401; bearer on human host → 404; `POST /auth/send` with foreign Origin → 403.
+- CLI access: `npx -y vercel@59.16.0 -Q ~/.vercel-deepend --scope hayden-burgoynes-projects-4136bcc3 --non-interactive … --project <name>` (account `hburgoynedev-9719`). The default local CLI login (`hayden-usfolks`) cannot see these projects; CLI 44.2 device login fails with "Could not inspect token". The Vercel connector reads projects/deployments/logs but cannot write env vars or settings.
 
-- **Vercel Git link verified**: pushing `399c455` created GitHub deployments for both projects (`deepend-human`, `deepend-agents`, team `hayden-burgoynes-projects-4136bcc3`, `team_3ULeCfffk7tcKFZGa2KbrQtp`). Both Vercel builds reported **success** — first successful build of the Express entrypoint fix (the old "No entrypoint found in output directory: public" error did not recur). Deployment URLs `deepend-human-9xusttilh-…vercel.app`, `deepend-agents-6v0zzlhry-…vercel.app`.
-- They were **Preview** deployments (`production_environment: false`), so the production branch is still not `mvp-build`. Previews redirect (302) to Vercel SSO, as DEPLOY.md requires. The expected production aliases `deepend-{human,agents}-hayden-burgoynes-projects-4136bcc3.vercel.app` return 404 `DEPLOYMENT_NOT_FOUND`: no production deployment exists. Runtime behaviour (503 `configuration_required` before env vars) is not yet observed. Confirm the actual assigned production domains before setting `DEEPEND_*_ORIGIN`, since the app enforces exact hosts; prefer a production domain that is not behind Vercel Authentication.
-- The original file-upload deployments failed and must not be redeployed.
-- **Update (after owner set production branches; Vercel + Supabase connectors now attached):** `deepend-human` has a READY production deployment (`dpl_HJXpod86ngqhNR4LKxuMNTGQ5TWu`), framework express, Node 24.x, domains `deepend-human.vercel.app` (public) and the team alias (SSO-protected, 302). `https://deepend-human.vercel.app/` returns **503 `configuration_required`, no-store** — the Express function runs; env vars absent. Use `https://deepend-human.vercel.app` as `DEEPEND_HUMAN_ORIGIN`.
-- `deepend-agents` (framework express, Node 24.x) had **no production deployment** at that point: only the failed file upload (production, ERROR) and two READY previews. `deepend-agents.vercel.app` returned 404. Its only domain was the SSO-protected team alias. Verify its production branch and assigned public domain before setting `DEEPEND_AGENT_ORIGIN`.
-- **Later update:** `c667f5a` deployed as Production on both projects. `deepend-agents` now has `deepend-agents.vercel.app` (public); both production domains return 503 `configuration_required`. Production branch `mvp-build` verified by deployment environment for both.
-- Vercel CLI authorized as `hburgoynedev-9719` using `npx -y vercel@59.16.0 -Q ~/.vercel-deepend --scope hayden-burgoynes-projects-4136bcc3 --project <name>` (CLI 44.2 device login fails with "Could not inspect token"). Production-only env vars set on **both** projects and verified by `env ls`: `DEEPEND_SURFACE` (human/agent), `DEEPEND_HUMAN_ORIGIN=https://deepend-human.vercel.app`, `DEEPEND_AGENT_ORIGIN=https://deepend-agents.vercel.app`, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` (modern `sb_publishable_` key), and Sensitive `DEEPEND_APP_SECRET` + `CRON_SECRET` (32 random bytes base64url, identical across projects, generated in-shell and piped via stdin; never printed or stored). `DEEPEND_ALLOWED_EMAILS` set on both (three pilot addresses; empty would mean open enrollment). Owner entered Sensitive `SUPABASE_SERVICE_ROLE_KEY` on both; presence verified by `env ls`. Owner reports Supabase Site URL, OTP expiry and other settings done; Magic Link template edit still pending custom SMTP (hosted Supabase restricts template edits on the default sender, and the default sender only reaches project team members).
-- Vercel connector exposes project/deployment/log reads but **no environment-variable or project-settings write**; env vars need the dashboard or an authorized CLI.
-- Supabase connector verified `deepend-mvp` ACTIVE_HEALTHY (Postgres 17.6). Remote migration history: `20260914022633 deepend_mvp`. The local file is `202609130001_mvp.sql` — **versions differ**, so `supabase db push` would try to reapply the CREATE migration. Repair history (`supabase migration repair`) or align the filename before using CLI migrations.
-- Local Vercel CLI default login is a different account (`hayden-usfolks`, team `hayden-burgoynes-projects`) and cannot see these projects. An isolated login (`vercel login --future -Q ~/.vercel-deepend`) was started twice; both device codes expired unapproved. Retry when the owner is present, then use `-Q ~/.vercel-deepend --scope hayden-burgoynes-projects-4136bcc3` for all commands.
-- Local Supabase CLI login is the Us Folks org and cannot see `deepend-mvp`.
-- Claude in Chrome extension was not connected.
-- Environment variables, Supabase email OTP template/SMTP, cron, hosted auth, and all live agent behavior: not configured / not verified.
+**Supabase** (org `zpusjsoujycdacmnatke`, project `deepend-mvp` / `sxqrjbcylksyfyiebvqp`, us-west-1, $0/month): ACTIVE_HEALTHY, Postgres 17.6. Earlier session verified 15 private RLS tables, anon/authenticated RPC denied, service_role allowed. Remote migration history: `20260914022633 deepend_mvp`; local file is `202609130001_mvp.sql` — **versions differ**, so `supabase db push` would try to reapply the CREATE migration. Run `supabase migration repair` or align the filename first. The local Supabase CLI is logged into another org; use the connector.
+
+## Not yet verified
+
+- Owner set Site URL, OTP expiry and service key. **Magic Link template (`{{ .Token }}`) and custom SMTP pending**: hosted Supabase's default sender only mails project team members and restricts template customisation, so custom SMTP is required for the pilot anyway.
+- Database connectivity from Vercel (not proven by `/health` or 401s), human email-code login, rooms/invitations, agent activation, cron success (schedule `17 3 * * *`, human surface performs cleanup), hosted concurrency/restore, and all live Muse A / Muse B / Instinct B behaviour.
 
 ## Next actions
 
-1. Owner approves Vercel device login for the correct account. Then per project: confirm Git repo link and set production branch `mvp-build`; framework Express, root `.`, Node 24.x, no Output Directory override.
-2. Deploy `mvp-build` HEAD via Git, inspect build logs, confirm `/` returns 503 `configuration_required` (expected before env vars).
-3. Set server-only env vars per DEPLOY.md. Generate `DEEPEND_APP_SECRET` / `CRON_SECRET` and pipe directly into `vercel env add` (never print). Supabase URL/keys: owner enters them in Vercel settings, or pipe from an authorized Supabase CLI without printing.
-4. Owner configures Supabase Magic Link template with `{{ .Token }}`, 10-minute OTP expiry, custom SMTP, Site URL = human origin.
-5. Redeploy; verify human OTP login, 401 on unauthorized `/internal/maintenance`, host separation, then room/invite/agent activation and live canaries per BUILD_STATUS.md.
+1. Owner configures custom SMTP, then edits the Magic Link template to show `{{ .Token }}`.
+2. Owner requests a code at `https://deepend-human.vercel.app`; verify login, create a room, check runtime logs for errors.
+3. Trigger maintenance with the cron secret (via Vercel cron run, not by printing the secret) and confirm success.
+4. Invitation + confirmation for the second owner; create Muse A, Muse B, Instinct B; guide secure credential entry; hello/read-back; scheduled canaries per BUILD_STATUS.md.
 
-## Git and implementation notes
+## Implementation notes
 
-Git push over the local credential helper works from this machine. Never force-update. Dispatcher uses an instance control-row lock for pilot simplicity; measure hosted contention. Native notifications cannot be guaranteed exactly-once. Audit retention needs the deployed maintenance cron. Muse's proprietary surrogate-helper installation remains an in-platform step. See API.md, RUNBOOK.md and connector guides.
+Git push works from this machine; never force-update. Dispatcher uses an instance control-row lock for pilot simplicity; measure hosted contention. Native notifications cannot be guaranteed exactly-once. Muse's proprietary surrogate-helper installation remains an in-platform step. See API.md, RUNBOOK.md and connector guides.

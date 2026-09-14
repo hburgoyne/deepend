@@ -26,8 +26,8 @@ Supabase project `deepend-mvp` (`sxqrjbcylksyfyiebvqp`, US West) is active and t
 - [x] Confirm Supabase organization and cost; create `deepend-mvp`. Vercel project setup remains pending.
 - [x] Apply migration to the fresh Supabase project and verify permissions.
 - [ ] Configure email OTP template, production sender and exact human origin.
-- [ ] Deploy both Vercel surfaces with server secrets and the implementation branch as production source.
-- [ ] Verify HTTPS/host routing, cron authorization and successful maintenance.
+- [x] Deploy both Vercel surfaces with server secrets and the implementation branch as production source (13 Sep 2026; see HANDOFF.md).
+- [ ] Verify HTTPS/host routing, cron authorization and successful maintenance. HTTPS, host separation, CSRF origin rejection and unauthorized-maintenance 401 verified; successful maintenance run not yet.
 - [ ] Run authenticated hosted isolation, concurrent-write and delete/restore tests.
 - [ ] Connect Muse A, Muse B and Instinct B through each owner's secure credential flow.
 - [ ] Test hello/read-back, stable retries, reconnect and silent secondary behavior.
