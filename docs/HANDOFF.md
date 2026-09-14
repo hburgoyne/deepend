@@ -1,27 +1,26 @@
 # Resume handoff — 14 September 2026
 
-Start from remote branch `mvp-build`. `npm ci && npm run check` passed TypeScript and all 13 database/HTTP tests. No cloud deployment or live agent canary has been completed.
+Remote branch: `mvp-build`. TypeScript and all 13 PGlite/HTTP tests pass. Implementation, migration, connector guides, deployment instructions and operator runbook are committed.
 
-## Cloud state and next action
+## Cloud state
 
-- Supabase and Vercel integrations are installed and callable.
-- Supabase lists no projects and one organization: `Deepend`, ID `zpusjsoujycdacmnatke`.
-- Supabase's provisioning tools explicitly require asking the user which organization to use, then obtaining/confirming cost before creating a project. Organization confirmation is pending. Do not treat the empty project list as an access failure.
-- Vercel lists no teams; personal-account deployment may still be supported. Its deployment tool requires `target` (`preview` or `production`), `name`, and `files`. Full write/env provisioning capability still needs inspection; do not assume read access implies secret-setting access.
-- Never request hosting secrets in conversational text. Use connected operations or secure provider settings.
+- User explicitly approved creating the project in the **Deepend** Supabase organization (`zpusjsoujycdacmnatke`). Cost returned and confirmed through provisioning: **$0/month**.
+- Project: `deepend-mvp`, ref `sxqrjbcylksyfyiebvqp`, region `us-west-1`, status ACTIVE_HEALTHY.
+- Applied migration `deepend_mvp` from `supabase/migrations/202609130001_mvp.sql` using Supabase migration tool. Do not reapply its CREATE statements. Inspect remote migration history before future CLI synchronization.
+- Hosted checks: 15 private tables, all RLS enabled; anon and authenticated cannot execute `deepend_call`; service_role can; invalid agent credential returns unauthorized.
+- Security advisor: only INFO `rls_enabled_no_policy` notices for the private schema. Default-deny direct client access is intentional; do not add permissive policies to silence these notices.
+- Vercel integration is connected; team list was empty. Personal-account deployment may still be supported. The deployment tool requires `target`, `name`, `files`; complete env/project setup capability remains unverified.
+- No Vercel deployment, SMTP setup, or live agent canary has been completed. Never request secrets in conversational text.
 
-## Continuation
+## Next actions
 
-1. Obtain required organization selection and cost confirmation. Create a fresh Supabase project; do not reuse prototype SQL.
-2. Review current Supabase/Vercel skills, then deploy using `DEPLOY.md`. Inspect permissions/advisors after migration.
-3. Configure OTP email template and SMTP. Provision two Vercel surfaces, exact origins and server-only secrets.
-4. Run hosted HTTP and database tests, verify cron and restore behavior, then actual Muse A / Muse B / Instinct B canaries with their owners.
-5. Update `BUILD_STATUS.md` with concrete evidence and remaining gaps. Commit/push at each substantial checkpoint.
+1. Configure Supabase email OTP template and SMTP; inspect supported secure credential transfer to Vercel. Existing Supabase tools expose publishable keys but no general secret-key/auth-configuration operation was discovered. Use supported provider setup; do not extract internal platform secrets through SQL.
+2. Deploy human and agent Vercel surfaces with exact HTTPS origins and server-only environment variables following DEPLOY.md. Test cron authorization and cleanup.
+3. Run hosted concurrency, HTTP, Auth and restore checks, then connect the actual Muse A, Muse B and Instinct B through each owner's secure platform flow.
+4. Test closed-app scheduled writes, silent secondary work, notification uncertainty and contact switching. Update BUILD_STATUS.md with evidence; do not equate automated tests with platform compatibility.
 
-## Git access
+## Git and implementation notes
 
-Git CLI reads worked, but HTTPS push had no terminal credentials. GitHub connector create-tree/create-commit/create-branch/update-ref operations successfully published the branch. Use non-forced updates on the latest remote parent. Local checkout may have a different commit history with identical content; compare tree SHAs before reconciling. Large file uploads may need chunked local reads to avoid tool-output truncation.
+Git CLI reads work; HTTPS push lacked credentials. GitHub connector tree/commit/branch/ref operations publish successfully. Use the latest remote commit as parent and never force-update. Local history may differ despite identical tree contents; synchronize carefully. Large uploads need chunked reads to avoid tool truncation.
 
-## Review priorities
-
-The dispatcher currently uses a global control-row lock: deliberate pilot simplicity, requiring hosted concurrency measurement. Native delivery cannot be exactly-once; check the pre-send lease and reconcile uncertainty. Audit cleanup depends on verified cron execution. Muse's proprietary credential-helper installation remains an in-platform step, not a fully tested bundled connector. Do not describe automated tests as proof of private-tool isolation or silent unattended agent behavior.
+Dispatcher uses an instance control-row lock for pilot simplicity; measure hosted contention. Native notifications cannot be guaranteed exactly-once. Audit retention needs the deployed maintenance cron. Muse's proprietary surrogate-helper installation remains an in-platform step. See API.md, RUNBOOK.md and connector guides for operating contracts.

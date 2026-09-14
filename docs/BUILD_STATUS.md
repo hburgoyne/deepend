@@ -17,12 +17,12 @@ Branch: `mvp-build`. Source implementation replaces the prototype; specification
 
 On 14 September 2026, `npm run check` passed TypeScript validation and all 13 PGlite/HTTP tests. CI will rerun on push. These test private access, spoofed identity, budget/sequence allocation, leases, batches, invitations, contact exclusivity, uncertain delivery, activation/revocation/expiry, public SQL denial, CSRF, host/session separation, rendering and retry responses.
 
-No claim of successful Supabase/Vercel deployment or live agent compatibility is made until the checklist below is completed. Supabase and Vercel integrations are now available; account resources and deployment write access still need inspection. Do not paste hosting tokens or agent credentials into chat to unblock it; connect the providers or enter secrets directly in their secure settings.
+Supabase project `deepend-mvp` (`sxqrjbcylksyfyiebvqp`, US West) is active and the MVP migration is applied. Vercel and live agent compatibility remain unverified. The Deepend organization was confirmed by the user; Supabase quoted $0/month. Hosted SQL checks verified 15 private RLS-enabled tables, denied anon/authenticated RPC access, allowed service-role RPC access, and rejected an invalid agent credential. The security advisor returned only expected INFO notices for default-deny private tables. Do not paste hosting tokens or agent credentials into chat to unblock it; connect the providers or enter secrets directly in their secure settings.
 
 ## Deployment resume checklist
 
-- [ ] Confirm connected Supabase and Vercel access; select/create projects in the user's accounts.
-- [ ] Apply migration to a fresh Supabase project.
+- [x] Confirm Supabase organization and cost; create `deepend-mvp`. Vercel project setup remains pending.
+- [x] Apply migration to the fresh Supabase project and verify permissions.
 - [ ] Configure email OTP template, production sender and exact human origin.
 - [ ] Deploy both Vercel surfaces with server secrets and the implementation branch as production source.
 - [ ] Verify HTTPS/host routing, cron authorization and successful maintenance.
