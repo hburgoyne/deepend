@@ -1,98 +1,31 @@
 # Deepend
 
-*Throw your agents in the deep end.*
+Private collaboration through the agents you already use. One contact agent per person brings back meaningful updates; other agents contribute quietly to the shared room.
 
-Shared state for humans and their AI assistants. A tiny open protocol plus a
-reference backend (Supabase) that lets 2+ people and their agents share one
-group chat, one task list, and one long-term memory — no matter which assistant
-each person uses.
+This branch replaces the prototype with a Supabase/Vercel MVP. It contains the application, transactional database migration, two secure web surfaces, API, and automated tests. **It has not passed live Muse/Instinct canaries until recorded in [BUILD_STATUS.md](docs/BUILD_STATUS.md).**
 
-The product isn't chat. It's **shared state for agents**: a dumb, fast backend
-with conventions smart agents follow. If you've ever wanted your Muse and
-someone else's Muse to coordinate without you playing telephone, this is that.
+- Humans use email sign-in for room setup, invitations, agent credentials and contact settings. No daily conversation dashboard is required.
+- Muse uses the scoped REST API through its platform's secure credential helper.
+- Instinct uses vault activation and its persistent cloud browser, with saved mutation drafts and receipts.
+- OpenClaw is an optional experimental API client.
 
-## Build specifications
+## Deploy directly
 
-The repository currently contains the experimental prototype. For upcoming work, use:
+Follow [DEPLOY.md](docs/DEPLOY.md): one fresh Supabase project, two Vercel projects from this repository. The human project hosts settings and Auth entry; the agent project hosts the browser workspace and API. Existing users of someone else's hosted instance need no hosting accounts.
 
-- [MVP spec](docs/MVP_SPEC.md): private collaboration through existing agent chats, minimal setup, and one contact agent per person per room.
-- [V2 spec](docs/V2_SPEC.md): the later product with richer workflows, security controls, and selected-message sharing.
+No local database or local application deployment is required. The operator still needs authenticated access to Supabase/Vercel and an email sender configured in Supabase.
 
-These documents describe planned behavior. The prototype instructions below, including its shared service-role setup, are not the security model for either release.
+## Documents
 
-## How it works
+- [MVP spec](docs/MVP_SPEC.md) — intended release requirements.
+- [V2 spec](docs/V2_SPEC.md) — later product.
+- [Build status](docs/BUILD_STATUS.md) — implemented, verified and remaining work.
+- [API and processing contract](docs/API.md).
+- [Operator runbook](docs/RUNBOOK.md).
+- [Muse](connectors/MUSE.md), [Instinct](connectors/INSTINCT.md), [OpenClaw](connectors/OPENCLAW.md).
 
-- One **workspace** per group (a family, a team, a project).
-- **Members** are humans or agents, each with a name.
-- Agents **poll** `messages` for new rows (cheap — milliseconds), post replies as
-  new rows, claim tasks before acting, and one designated agent compacts old
-  chat into `memories` nightly ("the dream"). Push-style wake options
-  (per-platform) are documented in PROTOCOL.md §12.
-- **Mix assistants.** A Muse bot and an Instinct bot can share one workspace —
-  the protocol is platform-agnostic (see PROTOCOL.md §11).
-- Humans read/post via the minimal web UI in `web/`.
+## Verification
 
-See [PROTOCOL.md](PROTOCOL.md) for the full spec — it's short.
+`npm ci && npm run check` runs TypeScript checks and PostgreSQL-backed domain tests using embedded PGlite, plus HTTP boundary tests. These are developer checks, not a required end-user setup. Hosted concurrency and actual agent behavior require live tests.
 
-## Quickstart (self-hosted)
-
-**You provision; your agents operate.** The human does the project-creation
-click-steps once (~10 minutes); agents only ever handle project-scoped keys.
-Never hand an agent your Supabase *personal access token* — that's
-account-level authority, and agents must refuse it if offered.
-
-1. Create a free project at [supabase.com](https://supabase.com).
-2. In the SQL editor, run every file in `supabase/migrations/` **in order**
-   (`001` → `005`). (Or `supabase db push` with the CLI.)
-3. (Optional) load demo data: run `supabase/seed.sql` in the SQL editor.
-4. Create your workspace and members:
-   ```sql
-   insert into workspaces (name, dream_owner) values ('Family', 'Muse')
-     returning id;  -- save this as your workspace id
-   insert into members (workspace_id, name, kind) values
-     ('<workspace-id>', 'Hayden', 'human'),
-     ('<workspace-id>', 'Muse', 'agent');
-   -- poll_token is auto-generated per member; read it back with:
-   select name, poll_token from members where workspace_id = '<workspace-id>';
-   ```
-5. Hand each person's assistant: the project URL, the **service-role** key
-   (server-side secrets only — never in a browser), the workspace id, their
-   member name, the other members' names, and their poll token. Then paste
-   [agent/SETUP_PROMPT.md](agent/SETUP_PROMPT.md) into each assistant — it
-   teaches the protocol and has the agent verify itself with a hello row.
-6. Humans read/post via the minimal web UI in `web/index.html` (fill in URL +
-   key + workspace id). Note: the UI uses the anon key, and RLS ships tight —
-   for local tinkering only, you can run `supabase/demo_open_access.sql` by
-   hand to loosen it. Never do that with real data in the workspace.
-
-> **Free tier is fine.** No paid account needed: 500 MB database and unlimited
-> API requests cover a relay easily (nightly consolidation keeps history tiny).
-> One caveat: free projects pause after 7 days of *zero* activity — but agents
-> polling every few minutes counts as activity, so a live workspace keeps itself
-> awake. A workspace idle for a full week needs one click in the dashboard to
-> resume.
-
-> **Security model.** RLS is tight by default: unauthenticated callers can only
-> hit the credential-free wake RPCs. Agents use the **service-role** key from
-> server-side secrets only — never in a browser. Sharing one service-role key
-> between trusted family agents is the reference setup; per-member scoped
-> credentials are the hardening path for anyone beyond that. Load-bearing rules
-> (agent turn cap, write rate limit, server timestamps, watermark-safe archive)
-> are enforced by Postgres triggers in migration `005`, not just by asking
-> nicely.
-
-## Repo layout
-
-```
-PROTOCOL.md                 The agent relay protocol (the actual product)
-supabase/migrations/        Postgres schema: workspaces, members, messages, tasks, memories
-                           (004: credential-free wake endpoint; 005: server-side hardening)
-supabase/demo_open_access.sql  OPT-IN permissive RLS for throwaway local demos only (not a migration)
-supabase/seed.sql           Demo workspace with two humans + two agents
-agent/SETUP_PROMPT.md       "Paste this into your assistant" installer
-web/index.html              Minimal human UI (single file, no build step)
-```
-
-## License
-
-MIT — see [LICENSE](LICENSE).
+Source is MIT licensed. Never expose service-role credentials to agents. Never apply the old prototype migrations or enable public access to private tables.

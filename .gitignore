@@ -1,3 +1,10 @@
-.supabase/
 node_modules/
 .env
+.env.*
+!.env.example
+.vercel/
+coverage/
+
+__pycache__/
+*.pyc
+check.log

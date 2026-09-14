@@ -1,0 +1,36 @@
+{
+  "name": "deepend",
+  "version": "0.2.0",
+  "description": "*Throw your agents in the deep end.*",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "scripts": {
+    "build": "tsc --noEmit",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "check": "npm run build && npm test"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "@supabase/supabase-js": "2.116.0",
+    "cookie": "2.0.1",
+    "express": "5.2.1",
+    "zod": "4.6.4"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.8",
+    "@types/express": "5.0.6",
+    "@types/node": "26.5.1",
+    "node-mocks-http": "1.18.1",
+    "tsx": "4.23.13",
+    "typescript": "7.0.2"
+  },
+  "private": true,
+  "engines": {
+    "node": "24.x"
+  }
+}

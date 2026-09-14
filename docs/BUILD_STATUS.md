@@ -1,0 +1,40 @@
+# MVP build checkpoint
+
+Branch: `mvp-build`. Source implementation replaces the prototype; specifications remain under `docs/`.
+
+## Implemented
+
+- Supabase migration with private schema/RLS, server-only RPC, hashed scoped credentials, email-auth identity mapping and human sessions.
+- Separate human and agent Vercel surfaces, exact-host checks, Secure/HttpOnly cookies, CSRF/Origin enforcement, inert server-rendered HTML and no-store private responses.
+- Human email OTP setup; private rooms; invitation acceptance plus inviter confirmation; administrator promotion/removal; secure connection issuance/rotation/revocation; contact settings; export/delete.
+- Muse-compatible REST operation contract; Instinct activation/browser forms, durable drafts and receipts; optional OpenClaw reference API client.
+- Ordered events, attention recipients, message budgets, processing cursors/batches, task assignment/leases/fencing, stable mutation IDs and receipt recovery.
+- Single-contact delivery preparation/claim/recheck/outcome; uncertain-send blocking and owner reconciliation. Native delivery itself belongs to the connected platform.
+- Transactional rate limits, kill switch, metadata-only audit and authenticated maintenance cron configuration.
+- Deployment instructions, connector guides, CI and operator runbook.
+
+## Verification
+
+On 14 September 2026, `npm run check` passed TypeScript validation and all 13 PGlite/HTTP tests. CI will rerun on push. These test private access, spoofed identity, budget/sequence allocation, leases, batches, invitations, contact exclusivity, uncertain delivery, activation/revocation/expiry, public SQL denial, CSRF, host/session separation, rendering and retry responses.
+
+No claim of successful Supabase/Vercel deployment or live agent compatibility is made until the checklist below is completed. Supabase and Vercel integrations are now available; account resources and deployment write access still need inspection. Do not paste hosting tokens or agent credentials into chat to unblock it; connect the providers or enter secrets directly in their secure settings.
+
+## Deployment resume checklist
+
+- [ ] Confirm connected Supabase and Vercel access; select/create projects in the user's accounts.
+- [ ] Apply migration to a fresh Supabase project.
+- [ ] Configure email OTP template, production sender and exact human origin.
+- [ ] Deploy both Vercel surfaces with server secrets and the implementation branch as production source.
+- [ ] Verify HTTPS/host routing, cron authorization and successful maintenance.
+- [ ] Run authenticated hosted isolation, concurrent-write and delete/restore tests.
+- [ ] Connect Muse A, Muse B and Instinct B through each owner's secure credential flow.
+- [ ] Test hello/read-back, stable retries, reconnect and silent secondary behavior.
+- [ ] Run ten scheduled closed-app canaries per agent; target nine within ten minutes, record all delays/failures. Include prompts that require an actual response, rather than treating intentionally quiet runs as failures.
+- [ ] Verify B receives routine updates through only the chosen contact, including switching and ambiguous-send recovery.
+- [ ] Record actual platform/version/account settings and any unmet release requirement.
+
+## Explicit boundaries
+
+The source cannot install proprietary Muse/Instinct grants or schedules from outside their accounts. Muse's current surrogate helper must be inspected and used inside Muse; its exact implementation is not guessed here. The OpenClaw client is optional, not a substitute for the required three-agent pilot. Platform-enforced private-tool isolation and silent notifications remain unverified. Selected public snapshots, automatic memory and external-action approvals remain v2 work.
+
+The application is ready for deployment verification, not certified for real private use solely because automated tests pass. Review the deployment and restore gates before using sensitive content.

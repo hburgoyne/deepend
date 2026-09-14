@@ -1,0 +1,4 @@
+project_id = "deepend"
+[db.migrations]
+enabled = true
+schema_paths = []
