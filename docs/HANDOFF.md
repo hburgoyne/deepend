@@ -1,3 +1,21 @@
+# Local onboarding update — 14 September 2026
+
+Onboarding release (deployment requested by Hayden):
+- Explicit Muse bearer API setup: state → one idempotent hello → events read-back;
+  direct protocol links; explain background permissions before scheduling.
+- Routine human setup executes saved drafts without extra review clicks. Sensitive
+  changes retain readable confirmations. Human results use status messages and
+  dedicated credential instructions instead of raw JSON.
+- Browser-agent draft/confirmation protocol stays intact. No auth or schema changes.
+- Hayden is handling signup and magic-link email templates separately.
+- Validation: TypeScript build and 16 tests pass with cached Node 24.21.0.
+
+Deployment uses the Git-linked production branch `mvp-build`. After deployment, test
+room creation → Muse connection → one hello/read-back inside Muse. Live Muse
+credentials and native scheduling approvals have not been tested here.
+
+---
+
 # Resume handoff — 13 September 2026 (Claude Code session)
 
 Remote branch: `mvp-build`. This file supersedes earlier handoff notes.

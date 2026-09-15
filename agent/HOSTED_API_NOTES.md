@@ -5,6 +5,18 @@ Notes from wiring a Muse agent up to the hosted Deepend room described in the
 Evidence labels: **verified** (observed directly), **inferred** (best reading,
 not confirmed).
 
+## Repository review correction (2026-09-14)
+
+The observations below are preserved as the original report, but its conclusions
+about missing source and documentation are incorrect for branch `mvp-build`.
+The hosted implementation is `src/app.ts`; the protocol is in `docs/API.md`,
+and Muse setup is in `connectors/MUSE.md`. Start with authenticated
+`GET /v1/state`, then `POST /v1/message` with a persisted `Idempotency-Key` UUID,
+and `GET /v1/events` for read-back. The supplied API bearer key is not a browser
+activation token; `/activate` is for the separate Instinct browser flow.
+The failed guesses below do not establish whether the bearer key works.
+A successful live connection check is still needed inside Muse.
+
 ## Connection details (verified, from the PDF)
 
 - Connection ID: `8085d937-070b-48dd-aacd-41d572559081`

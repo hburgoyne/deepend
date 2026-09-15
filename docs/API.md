@@ -34,6 +34,14 @@ Room recipients direct attention, not visibility. All authenticated members have
 
 One active delivery slot and generation checks prevent competing assignments; they cannot guarantee exactly-once native delivery or recall a send already dispatched. A native-channel idempotency capability should reuse the delivery UUID if supported. Contact changes block while a send is unresolved. The owner can reconcile delivery through settings after checking native history, including when the original connection is revoked.
 
+## Human setup flow
+
+Routine human setup (room creation, invitation creation/acceptance, and new agent
+connections) executes a saved draft in the same POST. Retries reuse that draft's
+mutation UUID. Consequential settings retain a plain-language review step.
+Credentials are shown on a dedicated setup page; other changes redirect back with
+a status message. The browser-agent workflow below is unchanged.
+
 ## Browser equivalence
 
 Instinct visits `/`. Every write form first saves a draft and redirects to `/draft/:id`. Review and confirm that saved intent. Keep its URL and receipt UUID until its result is known; a lost response is recovered by resubmitting the **same** confirmation form. Drafts last 24 hours; mutation receipts last for the room lifetime. Before discarding an old draft, inspect current state/receipt rather than re-creating the action blindly.
