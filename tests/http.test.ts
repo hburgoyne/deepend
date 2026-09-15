@@ -21,7 +21,9 @@ test('scoped API hashes credentials, ignores sender fields and validates stable 
  assert.throws(()=>validate('task.update',{task_id:id,state:'done'}));
 });
 test('public surface is only login; authenticated data is no-store and inert',async()=>{
- const r=await request('human','GET','/');assert.equal(r.status,200);assert.match(String(r.headers['cache-control']),/no-store/);assert.match(String(r.headers['content-security-policy']),/default-src 'none'/);assert.equal(r.calls.length,0);
+ const r=await request('human','GET','/');assert.equal(r.status,200);assert.match(String(r.headers['cache-control']),/no-store/);assert.match(String(r.headers['content-security-policy']),/default-src 'none'/);
+ // no-referrer makes browsers send Origin: null on same-origin form posts, which the origin check rejects.
+ assert.equal(r.headers['referrer-policy'],'same-origin');assert.equal(r.calls.length,0);
  const x=await request('human','GET','/',{cookie:'__Host-deepend-human=owner'}, {},{email:'<script>alert(1)</script>',rooms:[]});
  assert.match(x.body,/&lt;script&gt;/);assert.doesNotMatch(x.body,/<script>/);
  assert.doesNotMatch(x.body,/secret-service-key/);

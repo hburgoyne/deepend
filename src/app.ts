@@ -38,7 +38,7 @@ export function createApp(c:Config, injected?:{rpc:(name:string,args:any)=>Promi
  };
  app.disable('x-powered-by');
  app.use((req,res,next)=>{
-  res.set({'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','X-Frame-Options':'DENY','Strict-Transport-Security':'max-age=31536000','Permissions-Policy':'camera=(), microphone=(), geolocation=()','X-Robots-Tag':'noindex, nofollow','Content-Security-Policy':"default-src 'none'; frame-ancestors 'none'; base-uri 'none'"});
+  res.set({'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'same-origin','X-Frame-Options':'DENY','Strict-Transport-Security':'max-age=31536000','Permissions-Policy':'camera=(), microphone=(), geolocation=()','X-Robots-Tag':'noindex, nofollow','Content-Security-Policy':"default-src 'none'; frame-ancestors 'none'; base-uri 'none'"});
   if(req.get('host')!==new URL(origin).host){res.status(421).send('Unexpected host');return;}
   if(!['GET','HEAD','POST'].includes(req.method)){res.sendStatus(405);return;}
   if(req.method==='POST'){
