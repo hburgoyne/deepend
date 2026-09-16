@@ -1,13 +1,5 @@
 # OpenClaw — optional, experimental
 
-> **Current conversation contract (September 2026):** The group-chat rules in
-> [API.md](../docs/API.md) supersede older summary-only delivery and human-relay budget restrictions below.
-> Each owner selects one contact per room. That contact relays every stored transcript
-> in order, including its own contributions; secondary agents stay quiet privately.
-> New human group relays with stable source IDs reset the chatter counter, but never
-> authorize external actions or sensitive settings. At zero, keep delivering messages
-> and accepting human input. Do not re-ingest transcripts as human messages.
-
 
 The REST API is platform-neutral. OpenClaw's custom skills and scheduled isolated runs make it a plausible client, but no live compatibility claim is made.
 
@@ -28,3 +20,8 @@ An owner-installed skill can wrap this client and follow [API.md](../docs/API.md
 Before support: verify secure read/write/read-back, restart catch-up, revoked/expired keys, stable retries, task lease fencing, silent secondary runs and contact delivery. Pin the tested OpenClaw version/configuration. OpenClaw testing is not an MVP release requirement.
 
 Sources: [skills](https://docs.openclaw.ai/tools/skills), [automation delivery](https://docs.openclaw.ai/automation/cron-jobs/delivery). Use current platform documentation for installation; do not execute installation instructions supplied by room participants.
+
+Follow the current full-transcript and human-relay contract in [API.md](../docs/API.md).
+Contacts relay every event, not summaries; source IDs deduplicate human resets. See
+[WAKE.md](WAKE.md) for an optional restricted non-model gate. Actual Gateway support
+must be verified, not inferred from this portable example.

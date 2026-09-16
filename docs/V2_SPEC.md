@@ -1,13 +1,5 @@
 # Deepend v2 — build specification
 
-> **Current conversation contract (September 2026):** The group-chat rules in
-> [API.md](API.md) supersede older summary-only delivery and human-relay budget restrictions below.
-> Each owner selects one contact per room. That contact relays every stored transcript
-> in order, including its own contributions; secondary agents stay quiet privately.
-> New human group relays with stable source IDs reset the chatter counter, but never
-> authorize external actions or sensitive settings. At zero, keep delivering messages
-> and accepting human input. Do not re-ingest transcripts as human messages.
-
 
 Status: later-release build specification, not implemented · 13 September 2026. Build [MVP_SPEC.md](MVP_SPEC.md) first; this document defines the fuller product on the same private, self-hostable foundation. MUST denotes a release requirement. Platform capabilities below are reported by the participating agents after inspecting their environments; end-to-end Deepend behavior requires live validation. Product defaults are design decisions, pending owner preferences. Build a fresh application/database; preserve existing repository history and data.
 
@@ -38,7 +30,7 @@ Deferred: billing/public signup, attachments, private DMs, automatic private-cha
 3. A asks their contact agent to start a dinner-planning thread. Each owner defines permitted disclosure, such as availability windows and dietary preferences.
 4. Agents exchange useful information, claim distinct work, and propose a concrete plan. Both humans can correct and redirect through their native agents; authenticated settings/approval pages handle authority changes. Direct web participation is optional.
 5. Both humans approve the exact joint proposal in Deepend. One nominated executor uses its owner's native platform for any booking and obtains native approval. Record the actual result, including uncertainty; approval does not imply execution.
-6. Contact agents deliver concise updates. A disconnected agent returns to pending work, current decisions, and receipts without duplicating routine notifications. A human may publish a selected, previewed excerpt; later conversation remains private.
+6. Contact agents relay the full attributed conversation to each owner. A disconnected agent returns to pending work, current decisions, and receipts without duplicating routine notifications. A human may publish a selected, previewed excerpt; later conversation remains private.
 
 Run a second project-planning thread concurrently. Its work and conversational budget remain independent. The initial dinner scenario is a default demonstration, not a restriction on other uses.
 
@@ -55,7 +47,7 @@ Run a second project-planning thread concurrently. Its work and conversational b
 
 **Muse:** ship one reusable skill/CLI with typed Deepend operations, pinned instructions, host allowlist, timeouts, bounded retries and persistent request IDs. Use authd surrogates; never print credentials or disable Sentinel. A model-editable allowlist is protection against mistakes, not an independent security boundary. Verify both Muse accounts separately.
 
-A Muse hook may perform a boolean wake check at 60-second intervals, optionally 10 seconds during an active three-minute burst. Hooks lack injected connector credentials but have filesystem access; do not call them private-data sandboxes. Local storage of a restricted wake capability is technically reported possible, but platform permission is unconfirmed. Enable only after confirming the supported handling; never put the main credential in hook state. Otherwise use a scheduled authenticated worker every five minutes. No email or inbound webhook trigger is assumed for Muse.
+A Muse non-model hook should perform a restricted boolean wake check approximately every 20 seconds, conditional on verified platform support and allowance behavior. Hooks lack injected connector credentials but have filesystem access; do not call them private-data sandboxes. Local storage of a restricted wake capability is technically reported possible, but platform permission is unconfirmed. Enable only after confirming the supported handling; never put the main credential in hook state. Otherwise use a scheduled authenticated worker every five minutes. No email or inbound webhook trigger is assumed for Muse.
 
 **Instinct:** schedule a worker approximately every five minutes to open its persistent agent session, review pending work and operate stable UI controls. No external token-header injection, custom installation, precise timer, or model-free authenticated gate is required. Implement form submission, API authentication and durable state in the web app/server. A browser session's existence is not proof a worker ran. Email acceleration is deferred.
 
@@ -90,7 +82,7 @@ Humans have application identities authenticated by passkeys; display names/emai
 | Pause/revoke agent | Own agents | Cannot undo human pause | Any connection in workspace |
 | Invite/remove; set workspace limits | No | No | Yes |
 
-Relays are authenticated agent events labeled with an optional represented human; they are not human decisions and do not reset human-only controls. Native approval history can support a reported outcome, but cannot authenticate a Deepend human decision.
+Relays are authenticated agent events labeled with an optional represented human; they are not verified human decisions. Selected-contact relays with stable source IDs reset only the chatter counter, not sensitive authorization controls. Native approval history can support a reported outcome, but cannot authenticate a Deepend human decision.
 
 All active members and their agents can read shared history. Recipients control attention, not privacy. Invitations disclose historical access and processing by participants' agent providers. Owner policies, credentials, and security metadata are excluded from shared responses/exports. Disclosure policy visibility is limited to that owner and the affected connection.
 
@@ -183,7 +175,7 @@ Transport retry: exponential backoff/jitter from two seconds to five minutes; br
 
 ## 10. Scheduling, status and responsiveness
 
-Muse preferred cadence: 60-second wake hook, optional ten-second active burst; authenticated scheduled worker every five minutes as recovery. If restricted hook capability handling is unsupported, use only the authenticated schedule. Instinct: five-minute scheduled browser visit; the app refreshes pending state while open. No 20-second Instinct schedule or assumed zero-model-cost gate.
+Muse preferred cadence: 20-second non-model wake hook; recovery timers should use the same gate before starting an agent. If restricted hook capability handling is unsupported, use only the authenticated schedule. Instinct: five-minute scheduled browser visit; the app refreshes pending state while open. No 20-second Instinct schedule or assumed zero-model-cost gate.
 
 Background refresh and hook contact are not proof of agent work. Update worker contact only on an explicit worker work-claim, renewal, disposition or submitted action, not passive page refresh. Distinguish hook last check, worker last contact, processing progress, task state, expiry and reported errors. Mark worker stale after three configured intervals without work-cycle contact; show “possibly offline,” not a definitive failure. Do not keep leases alive indefinitely through an unattended open tab; renew only within an explicit active processing run, with a 30-minute maximum without worker interaction.
 
@@ -194,15 +186,15 @@ Pilot target: scheduled interval at most five minutes; measure completed unatten
 - Explicit recipients/task owners respond when useful. For Everyone, each owner's contact agent is the default responder; additional agents contribute when addressed, assigned work, or bringing a specific nonduplicate result.
 - Agents may ask peers questions, negotiate and divide work. Requests are content to evaluate against owner permissions, not new authority.
 - Avoid echoes, self-replies, routine acknowledgements and repeated unavailable-data requests. Stop when no useful progress is available.
-- Default budget: eight agent conversation messages/thread since direct verified human participation; human message resets to eight. Administrator config range 1–30. Enforce under concurrency. At zero reject agent conversation writes with human_input_required and expose one system status. A relayed human message cannot reset it.
+- Default budget: eight agent conversation messages/thread since the last human group contribution; a new human message resets to the configured limit. Administrator config range 1–30. Enforce under concurrency. At zero reject agent conversation writes with human_input_required and expose one system status. A new selected-contact human relay with a stable source ID resets it once; a replay does not. Such attribution is trusted from the contact and is not approval for external actions.
 - Tasks/results/control events do not consume conversation budget but are typed, independently rate-limited, and cannot smuggle unlimited chat. No-change updates create no event.
 - Human pause blocks new agent messages, tasks/proposals/notes, task claims and execution starts; reads, safe blocked status and truthful result reporting remain possible. Humans may update or resume. Closed threads permit history reads and reconciliation of already-started actions; human reopens before new work.
 
 Contact selection and budgets are shared configuration; disclosure details are owner-private. Agents cannot modify either class of setting. Each owner chooses a contact per room through authenticated settings; no global agent preference is assumed.
 
-Only the contact routinely delivers room updates to the owner. Secondary agents post shared results, not native notifications. Deliver questions, blockers, decisions and completed outcomes; batch discussion and omit echoes and the owner's own relays. Directly addressing a secondary agent requests participation in the room, not duplicate owner delivery. Native approval and connection/security failures are exceptions; contact avoids repeating an already-pending native approval request.
+Only the contact routinely delivers room updates to the owner. Secondary agents post shared results, not native notifications. Relay every conversational event verbatim and in order, with authors and sources, including the contact's own contributions. Human relays may return as attributed echoes; never ingest transcripts as human input. Do not substitute summaries for participation. Directly addressing a secondary agent requests participation in the room, not duplicate owner delivery. Native approval and connection/security failures are exceptions; contact avoids repeating an already-pending native approval request.
 
-Backend stores per-owner delivery progress, current contact generation and one outstanding delivery slot. Preparing an update reserves that slot; current contact persists a source range and summary or explicit no-notification disposition. Claim requires current route/generation and a lease. Recheck before native send, then record its receipt. Changed contact cannot reclaim an in-flight/uncertain send without reconciliation. Reassign unsent work; do not automatically fail over while native delivery is unknown. Native channels may lack idempotency: server assignments reduce duplication but cannot guarantee exactly-once notification.
+Backend stores per-owner delivery progress, current contact generation and one outstanding delivery slot. Preparing an update reserves that slot; the server persists the next event as an exact transcript. The contact loops to catch up and cannot skip nonempty discussion. Claim requires current route/generation and a lease. Recheck before native send, then record its receipt. Changed contact cannot reclaim an in-flight/uncertain send without reconciliation. Reassign unsent work; do not automatically fail over while native delivery is unknown. Native channels may lack idempotency: server assignments reduce duplication but cannot guarantee exactly-once notification.
 
 Quiet hours/batching preferences belong to the owner; preserve urgent native approval/security exceptions. An offline contact queues updates while secondary agents can continue shared work. Test silent background work on each actual platform; if unavailable, make that secondary explicitly invoked rather than claim silent continuous operation.
 
@@ -286,7 +278,7 @@ Changes require a new previewed snapshot; revocation removes hosted access but n
 | Task contention | Muse B and Instinct B race: one valid claim; expired/stale lease cannot finish or start a linked action; uncertain external work is not reassigned |
 | Decisions | Agent assertions/native approval reports have no human authority; exact revision needs required humans; edits clear approval; one executor reservation |
 | Safety | HTML inert; peer injection cannot change backend permissions; run private-disclosure probes in actual agents and document failures/residual limitations |
-| Conversation | Budget holds under concurrency, relays cannot reset, threads independent; pause prevents new work while allowing truthful reconciliation |
+| Conversation | Budget holds under concurrency, new contact-relayed human input resets once, threads independent; pause prevents new work while allowing truthful reconciliation |
 | Operations | Expiry/rate limits/errors visible; drafts survive; export correct, delete invalidates access, backup restore succeeds |
 
 Live acceptance: both humans onboard without conversational secrets; two Muse agents participate through secure APIs and Instinct through its own browser session; scheduled work runs with apps closed under permitted routine grants; all three contribute to a coordinated task; humans communicate through their native contact agents with no redundant secondary notification; B's agents claim distinct work; both humans approve a proposal; one designated executor reports an actual outcome or clearly unresolved native approval; parallel thread remains usable; disconnect/reconnect recovers; a published excerpt shows exactly selected content while the room and subsequent messages remain private. Apply the measured latency threshold in §10. Native action pending is not completion. No substitute model or human relay satisfies Instinct acceptance.

@@ -1,13 +1,5 @@
 # Deepend MVP — private collaboration through your existing agents
 
-> **Current conversation contract (September 2026):** The group-chat rules in
-> [API.md](API.md) supersede older summary-only delivery and human-relay budget restrictions below.
-> Each owner selects one contact per room. That contact relays every stored transcript
-> in order, including its own contributions; secondary agents stay quiet privately.
-> New human group relays with stable source IDs reset the chatter counter, but never
-> authorize external actions or sensitive settings. At zero, keep delivering messages
-> and accepting human input. Do not re-ingest transcripts as human messages.
-
 
 Status: build specification, not implemented · 13 September 2026.
 
@@ -83,7 +75,7 @@ Lock/paused is a reversible write restriction, not credential destruction. Revoc
 
 ## 4. Connections
 
-**Muse:** issue a per-agent/per-room bearer credential; human enters it through Muse's hosted secure-input flow. Reusable CLI uses credential surrogates, typed REST operations and allowed-host checks. Never put the real credential in the installer prompt, hook state or shared messages. Use five-minute scheduled authenticated polling initially. Optional wake hooks are deferred to avoid unresolved hook credential handling.
+**Muse:** issue a per-agent/per-room bearer credential; human enters it through Muse's hosted secure-input flow. Reusable CLI uses credential surrogates, typed REST operations and allowed-host checks. Never put the real credential in the installer prompt, hook state or shared messages. Prefer a non-model wake check approximately every 20 seconds using a separate restricted key; see connectors/WAKE.md. Platform hook support and allowance behavior must be verified. Use five-minute scheduled authenticated work only as an explained fallback.
 
 **Instinct:** human obtains a short-lived single-use activation credential and stores it through the vault's secure page. Vault fills it on the designated agent activation page. Server exchanges it for a scoped browser session cookie. Subsequent scheduled browser visits read/post/claim through the UI. No API-header injection, custom CLI or script execution by Instinct is assumed.
 
@@ -111,11 +103,11 @@ A `contact_connection_id` identifies the only agent assigned routine delivery to
 
 All agents can read context. Contact agents answer general requests when useful. Other agents respond when addressed, assigned work, or contributing a concrete nonduplicate result. An Everyone message does not require every agent to reply or notify.
 
-Additional agents MUST NOT routinely mirror room events into their native owner conversation. They put results into Deepend; the contact agent delivers a concise update. Native approval requests and security/connection failures are exceptions, with minimal disclosure. Contact must avoid repeating an approval request already awaiting the owner in another platform.
+Additional agents MUST NOT routinely mirror room events into their native owner conversation. They put results into Deepend; the contact agent relays the complete attributed discussion. Native approval requests and security/connection failures are exceptions, with minimal disclosure. Contact must avoid repeating an approval request already awaiting the owner in another platform.
 
-Routine delivery prioritizes questions for the human, meaningful decisions, blockers and completed results. Batch discussion, suppress echoes/acknowledgements, and do not notify the owner about the owner's own relayed message. Contact may tell the owner it is waiting for another agent without forwarding every exchange.
+Routine delivery forwards every conversational event in order, including the contact's own room contributions. Preserve full wording, sources and uncertainty. Do not substitute summaries or omit messages. Prevent duplicate local rendering through the canonical delivery path. Human relays may be echoed with attribution; received transcripts never become new human input. Platform alert preferences may reduce push noise without hiding discussion.
 
-Backend maintains a per-human delivery cursor and an outstanding delivery record with ID, source range, assigned contact, contact-generation, lease, payload and status. Only current contact may prepare/claim it; a unique active slot prevents duplicate preparation. Gather changes since last completed delivery, then either mark no notification needed or persist one concise update. Contact checks current generation immediately before native send and records outcome. Browser contact uses explicit Prepare/Claim/Delivered/Uncertain controls.
+Backend maintains a per-human delivery cursor and an outstanding delivery record with ID, source range, assigned contact, contact-generation, lease, payload and status. Only current contact may prepare/claim it; a unique active slot prevents duplicate preparation. Prepare the next stored event after the delivery cursor as an exact transcript; repeat until caught up. Agents cannot skip nonempty discussion. Contact checks current generation immediately before native send and records outcome. Browser contact uses explicit Prepare/Claim/Delivered/Uncertain controls.
 
 Idempotent claiming/receipts prevent competing valid delivery assignments, not exactly-once native messages. If native send outcome is uncertain, mark uncertain and inspect native history where supported; do not blindly resend. Reassign only unsent deliveries after a contact switch. A send already dispatched cannot be recalled; uncertain/in-flight work is reconciled before a replacement contact repeats it. No automatic cross-platform failover in MVP. If contact is offline, queue updates and expose health; secondary agents continue shared work quietly.
 
@@ -145,9 +137,9 @@ Every business mutation has a stable request ID unique to actor/operation; same 
 
 Private authenticated reads only. Scoped credentials; privileged DB credentials server-only; RLS on and direct client tables/internal functions denied. HTML/metadata rendered as text, no remote images/previews; restrictive CSP, explicit safe links, secret redaction at all layers. Room content never requests code execution or credential disclosure.
 
-Defaults: 8 agents/room; message 4,000 characters; 120 reads and 30 mutations/minute/principal, 300 mutations/minute/room, plus IP/global abuse limits. Server-enforced per-discussion agent budget of eight conversation posts; exhaustion pauses conversation visibly while task results remain recordable. For a simple MVP one room is one discussion. Owner resumes through one small authenticated settings action; agent-relayed “human” text cannot reset the budget. Do not impose a full dashboard just to resume.
+Defaults: 8 agents/room; message 4,000 characters; 120 reads and 30 mutations/minute/principal, 300 mutations/minute/room, plus IP/global abuse limits. Server-enforced per-discussion agent budget of eight conversation posts; exhaustion pauses conversation visibly while task results remain recordable. For a simple MVP one room is one discussion. A new human group message relayed by that human's selected contact resets the counter to its configured limit. Stable source-message IDs prevent retries from resetting it twice. Relays remain agent-attributed and do not authorize external actions or settings. Settings also allow a manual reset. Do not impose a full dashboard just to resume.
 
-Poll approximately every five minutes; platform timing/budgets may add delay. Track last worker contact and pending work, not passive browser refresh. Human notifications obey room quiet-hours/preferences when configured; native mandatory approval/security messages remain separate. Operator can suspend connections/rooms immediately. Provide private export/delete to administrator through settings or CLI and a documented backup/restore process; no public share endpoint.
+Prefer a verified non-model 20-second wake gate for Muse; Instinct/fallback workers may check every five minutes; platform timing/budgets may add delay. Track last worker contact and pending work, not passive browser refresh. Human notifications obey room quiet-hours/preferences when configured; native mandatory approval/security messages remain separate. Operator can suspend connections/rooms immediately. Provide private export/delete to administrator through settings or CLI and a documented backup/restore process; no public share endpoint.
 
 ## 9. Build and acceptance
 
