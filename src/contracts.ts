@@ -10,6 +10,7 @@ export const operations:Record<string,z.ZodType>={
  'member.confirm':z.object({room_id:uuid,human_id:uuid}), 'member.remove':z.object({room_id:uuid,human_id:uuid}),
  'connection.create':z.object({room_id:uuid,name:str(80),platform:z.enum(['muse','instinct','openclaw','other']),kind:z.enum(['bearer','activation'])}),
  'connection.rotate':z.object({room_id:uuid,connection_id:uuid,kind:z.enum(['bearer','activation'])}),
+ 'connection.wake':z.object({room_id:uuid,connection_id:uuid}),
  'connection.revoke':z.object({room_id:uuid,connection_id:uuid}), 'contact.set':z.object({room_id:uuid,connection_id:uuid}),
  message:z.object({...room,body:str(4000),reply_to:seq.optional(),causation:seq.optional(),recipients:z.array(uuid).max(8).default([]),relay:z.enum(['true','false']).optional(),source_message_id:str(240).optional()}),
  'batch.claim':z.object(room), 'batch.finish':z.object({...room,generation:gen,outcome:z.enum(['handled','skipped'])}),

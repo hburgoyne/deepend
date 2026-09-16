@@ -114,12 +114,39 @@ test('each owner has an independent contact and receives the same full conversat
  await call('agent','owner-a','message',{body:'Full text, not a summary.\nSecond line.'});
  const da=await call('agent','owner-a','delivery.prepare',{through:1});
  const dbb=await call('agent','owner-b','delivery.prepare',{through:1});
- assert.equal(da.payload,'[#1] A\nFull text, not a summary.\nSecond line.');
+ assert.equal(da.payload,'[#1] A (agent for a@example.test)\nFull text, not a summary.\nSecond line.');
  assert.equal(da.payload,dbb.payload);assert.notEqual(da.id,dbb.id);
  assert.equal((await call('agent','owner-a','delivery.claim',{delivery_id:dbb.id})).error,'not_contact');
  await call('agent','owner-a','delivery.claim',{delivery_id:da.id});
  await call('agent','owner-a','delivery.result',{delivery_id:da.id,outcome:'delivered'});
  assert.equal((await call('agent','owner-b','delivery.prepare',{through:1})).id,dbb.id);
+});
+test('wake-only keys report pending without message access or worker activity',async()=>{
+ await db.exec('delete from deepend.rates');
+ const r=(await human('h1','room.create',{title:'Wake room'})).room_id;
+ const c=(await human('h1','connection.create',{room_id:r,name:'Wake agent',platform:'muse',kind:'bearer',token_hash:'wake-agent'})).connection_id;
+ const wake=async(key:string)=>(await db.query<{v:any}>("select public.deepend_wake($1,'wake-test') v",[key])).rows[0].v;
+ await human('h1','connection.wake',{room_id:r,connection_id:c,token_hash:'wake-key'});
+ assert.deepEqual(await wake('wake-key'),{pending:false});
+ assert.equal((await wake('wake-agent')).error,'unauthorized');
+ assert.equal((await call('agent','wake-key','state')).error,'unauthorized');
+ assert.equal((await call('agent','wake-agent','connection.wake',{room_id:r,connection_id:c,token_hash:'bad'})).error,'forbidden');
+ const before=(await db.query<{last_seen:any}>('select last_seen from deepend.connections where id=$1',[c])).rows[0].last_seen;
+ await wake('wake-key');
+ assert.deepEqual((await db.query<{last_seen:any}>('select last_seen from deepend.connections where id=$1',[c])).rows[0].last_seen,before);
+ await call('agent','wake-agent','message',{body:'New event'});
+ assert.deepEqual(await wake('wake-key'),{pending:true});
+ const batch=await call('agent','wake-agent','batch.claim');
+ assert.deepEqual(await wake('wake-key'),{pending:false});
+ await call('agent','wake-agent','batch.finish',{generation:batch.generation,outcome:'handled'});
+ assert.deepEqual(await wake('wake-key'),{pending:false});
+ await human('h1','contact.set',{room_id:r,connection_id:c});
+ await db.exec('delete from deepend.rates');
+ assert.deepEqual(await wake('wake-key'),{pending:true}); // pending native delivery, despite handled events
+ await human('h1','connection.wake',{room_id:r,connection_id:c,token_hash:'replacement-wake'});
+ assert.equal((await wake('wake-key')).error,'unauthorized');
+ await human('h1','connection.revoke',{room_id:r,connection_id:c});
+ assert.equal((await wake('replacement-wake')).error,'unauthorized');
 });
 test('database denies public tables and server-only RPC; fresh login required',async()=>{
  await db.exec('set role anon');await assert.rejects(db.query('select * from deepend.rooms'));await assert.rejects(db.query("select public.deepend_call('human','h1','home')"));await db.exec('reset role');

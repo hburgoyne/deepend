@@ -1,3 +1,14 @@
+# Wake-check rollout — 15 September 2026
+
+Step 2: production migration `20260916040008_wake_checks` applied.
+Restricted GET /v1/wake, owner-issued separate wake keys, and a portable non-model
+Python gate are implemented. Actual Muse/Instinct hook API and allowance behavior
+remain unverified; do not claim zero-cost scheduling until tested in-platform.
+21 TypeScript/database/HTTP tests + 3 Python hook tests pass. Next: consolidate old
+connector/spec instructions, review incoming Instinct hook, and verify deployments.
+
+---
+
 # Group-chat rollout — 15 September 2026
 
 Step 1: production database migration `20260916035542_group_conversation` applied.

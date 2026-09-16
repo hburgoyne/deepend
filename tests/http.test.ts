@@ -77,3 +77,11 @@ test('connection setup distinguishes bearer keys and browser activation without 
   }else assert.match(r.body,/one-time activation credential/);
  }
 });
+
+test('wake endpoint accepts only authorization and uses the restricted RPC',async()=>{
+ const r=await request('agent','GET','/v1/wake',{authorization:'Bearer '+'w'.repeat(43)},{},{pending:false});
+ assert.equal(r.status,200);assert.equal(r.calls[0].name,'deepend_wake');
+ assert.equal(r.calls[0].args.p_hash,hash('w'.repeat(43)));
+ assert.equal((await request('agent','GET','/v1/wake',{cookie:'__Host-deepend-agent=session'})).status,401);
+ assert.equal((await request('human','GET','/v1/wake',{authorization:'Bearer '+'w'.repeat(43)})).status,404);
+});

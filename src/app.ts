@@ -85,6 +85,13 @@ export function createApp(c:Config, injected?:{rpc:(name:string,args:any)=>Promi
   });
   app.get('/delivery/:id/check',async(req,res)=>{const delivery_id=z.string().uuid().parse(req.params.id);show(res,page('Native send authorization',json(await call(req,'delivery.check',{delivery_id}))+'<p>Send the stored payload now, then record the outcome. A stale or paused result prohibits sending.</p><a href="/">Workspace</a>',true));});
   app.get('/events',async(req,res)=>{const b=validate('events',req.query),d=await call(req,'events',b);const next=d.events.at(-1)?.seq??b.after;show(res,page('Event data',json(d)+`<a href="/events?after=${next}">Next page</a> · <a href="/">Workspace</a>`,true));});
+  app.get('/v1/wake',async(req,res)=>{
+   if(!req.get('authorization'))throw new Error('unauthorized');
+   const result=await db.rpc('deepend_wake',{p_hash:hash(identity(req)),p_ip:ip(req)});
+   if(result.error)throw new Error('database_rejected');
+   if(result.data?.error)throw new Error(result.data.error);
+   res.json(result.data);
+  });
   app.all('/v1/:operation',async(req,res)=>{
    const op=String(req.params.operation);if(!operations[op]||['home','room.export'].includes(op))throw new Error('invalid_operation');
    if((reads.has(op)&&req.method!=='GET')||(!reads.has(op)&&req.method!=='POST')){res.sendStatus(405);return;}
@@ -113,14 +120,14 @@ export function createApp(c:Config, injected?:{rpc:(name:string,args:any)=>Promi
   res.locals.retryUrl=`/draft/${id}${room_id?'?room_id='+room_id:''}`;
   const d=await call(req,'draft.get',{id,...(room_id?{room_id}:{})});const body={...d.input};
   let issued:string|undefined;
-  if(['connection.create','connection.rotate','invite.create'].includes(d.op)){
+  if(['connection.create','connection.rotate','connection.wake','invite.create'].includes(d.op)){
    // Deterministic only under a server secret: retry produces the same credential, never a lost key.
    issued=createHmac('sha256',c.secret).update('issue:'+id).digest('base64url');body.token_hash=hash(issued);
   }
   const result=await call(req,d.op,body,id);
   let instructions='';
   if(issued){
-   instructions=d.op==='invite.create'?`<section><h2>Invitation code</h2><p>Share this code with the person you want to invite.</p><pre>${esc(issued)}</pre></section>`:setupInstructions(c.agentOrigin,body,result,issued);
+   instructions=d.op==='connection.wake'?`<section><h2>Wake-check key</h2><p>This key only reports whether work is pending. It cannot read or post messages. Store it in your platform’s approved secret storage, never in chat or script source. Issuing a new wake key replaces the previous one.</p><pre>${esc(issued)}</pre><p>Endpoint: ${esc(c.agentOrigin)}/v1/wake</p><p><a href="https://github.com/hburgoyne/deepend/blob/mvp-build/connectors/WAKE.md">Hook setup and limitations</a></p></section>`:d.op==='invite.create'?`<section><h2>Invitation code</h2><p>Share this code with the person you want to invite.</p><pre>${esc(issued)}</pre></section>`:setupInstructions(c.agentOrigin,body,result,issued);
   }
   const destination=!isAgent&&d.op!=='room.delete'&&(body.room_id||result.room_id)?'/room/'+(body.room_id||result.room_id):'/';
   if(!isAgent&&!issued)return res.redirect(303,destination+'?saved='+encodeURIComponent(d.op));
