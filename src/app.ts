@@ -3,6 +3,7 @@ import {createClient} from '@supabase/supabase-js';
 import {createHash,createHmac,randomBytes,randomUUID,timingSafeEqual} from 'node:crypto';
 import {parseCookie as parse,stringifySetCookie} from 'cookie';
 import {z} from 'zod';
+import {registerHook,signedHook,pairingPage,pairingList} from './hooks.js';
 import {operations,reads,validate} from './contracts.js';
 import {humanAction,needsReview,setupInstructions,successNotice} from './onboarding.js';
 import {esc,page,login,home,roomView,agentView,hidden,json} from './views.js';
@@ -32,6 +33,11 @@ export function createApp(c:Config, injected?:{rpc:(name:string,args:any)=>Promi
   if(result.error)throw new Error('database_rejected');
   if(result.data?.error)throw new Error(result.data.error);return result.data;
  };
+ const hookCall=(req:Request)=>(async(action:string,body:any,credential=false)=>{
+  const result=await db.rpc('deepend_hook',{p_action:action,p_hash:credential?hash(identity(req)):'',p_body:body,p_ip:ip(req)});
+  if(result.error)throw new Error('database_rejected');
+  if(result.data?.error)throw new Error(result.data.error);return result.data;
+ });
  const show=(res:Response,html:string)=>{
   const style=html.match(/<style>([\s\S]*?)<\/style>/)?.[1]??'';
   res.setHeader('Content-Security-Policy',`default-src 'none'; style-src 'sha256-${createHash('sha256').update(style).digest('base64')}'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'; object-src 'none'`);
@@ -76,7 +82,8 @@ export function createApp(c:Config, injected?:{rpc:(name:string,args:any)=>Promi
    setCookie(res,session,86400);res.redirect(303,'/');
   });
   app.post('/logout',async(req,res)=>{await call(req,'logout',{},randomUUID());setCookie(res,'',0);res.redirect(303,'/');});
-  app.get('/room/:id',async(req,res)=>{const room_id=z.string().uuid().parse(req.params.id);const h=await call(req,'home');show(res,roomView(await call(req,'state',{room_id}),h.human_id,successNotice(req.query.saved)));});
+  app.get('/hook-pairings/:id',async(req,res)=>{const pairing_id=z.string().uuid().parse(req.params.id);show(res,pairingPage(await hookCall(req)('owner.get',{pairing_id},true),c.agentOrigin));});
+  app.get('/room/:id',async(req,res)=>{const room_id=z.string().uuid().parse(req.params.id);const h=await call(req,'home');show(res,roomView(await call(req,'state',{room_id}),h.human_id,successNotice(req.query.saved),pairingList((await hookCall(req)('owner.list',{room_id},true)).pairings)));});
   app.get('/export/:id',async(req,res)=>{const room_id=z.string().uuid().parse(req.params.id);res.attachment('deepend-room.json').json(await call(req,'room.export',{room_id}));});
  }else{
   app.post('/activate',async(req,res)=>{
@@ -85,6 +92,9 @@ export function createApp(c:Config, injected?:{rpc:(name:string,args:any)=>Promi
   });
   app.get('/delivery/:id/check',async(req,res)=>{const delivery_id=z.string().uuid().parse(req.params.id);show(res,page('Native send authorization',json(await call(req,'delivery.check',{delivery_id}))+'<p>Send the stored payload now, then record the outcome. A stale or paused result prohibits sending.</p><a href="/">Workspace</a>',true));});
   app.get('/events',async(req,res)=>{const b=validate('events',req.query),d=await call(req,'events',b);const next=d.events.at(-1)?.seq??b.after;show(res,page('Event data',json(d)+`<a href="/events?after=${next}">Next page</a> · <a href="/">Workspace</a>`,true));});
+  app.post('/v1/hook-pairings',async(req,res)=>res.json(await registerHook(req,c.agentOrigin,c.humanOrigin,hookCall(req))));
+  app.get('/v1/hook-pairings/status',async(req,res)=>res.json(await signedHook(req,c.agentOrigin,'/v1/hook-pairings/status','status',hookCall(req))));
+  app.get('/v1/wake-signed',async(req,res)=>res.json(await signedHook(req,c.agentOrigin,'/v1/wake-signed','wake',hookCall(req))));
   app.get('/v1/wake',async(req,res)=>{
    if(!req.get('authorization'))throw new Error('unauthorized');
    const result=await db.rpc('deepend_wake',{p_hash:hash(identity(req)),p_ip:ip(req)});
@@ -140,7 +150,7 @@ export function createApp(c:Config, injected?:{rpc:(name:string,args:any)=>Promi
  app.use((_req,res)=>res.status(404).send('Not found'));
  app.use((err:any,req:Request,res:Response,_next:NextFunction)=>{
   const code=err instanceof z.ZodError?'invalid_input':err.message??'internal_error';
-  const safe=new Set(['source_message_required','delivery_required','invalid_input','unauthorized','forbidden','not_found','rate_limited','reauthenticate','invalid_code','invalid_activation','email_not_sent','enrollment_closed','database_rejected','request_conflict','invalid_operation','paused','human_input_required','lease_busy','stale_lease','not_contact','delivery_reconciliation_required','reconcile_before_retry','invalid_invitation','already_member','invalid_state','invalid_cursor','member_limit','admin_transfer_required']);
+  const safe=new Set(['replay_detected','source_message_required','delivery_required','invalid_input','unauthorized','forbidden','not_found','rate_limited','reauthenticate','invalid_code','invalid_activation','email_not_sent','enrollment_closed','database_rejected','request_conflict','invalid_operation','paused','human_input_required','lease_busy','stale_lease','not_contact','delivery_reconciliation_required','reconcile_before_retry','invalid_invitation','already_member','invalid_state','invalid_cursor','member_limit','admin_transfer_required']);
   const out=safe.has(code)?code:'request_rejected';const status=out==='rate_limited'?429:['unauthorized','reauthenticate'].includes(out)?401:out==='forbidden'?403:out==='not_found'?404:out==='database_rejected'?503:409;
   if(status===429)res.setHeader('Retry-After','60');res.status(status);
   if(req.path.startsWith('/v1/'))res.json({code:out,message:out.replaceAll('_',' '),...(status===429?{retry_after_seconds:60}:{})});
