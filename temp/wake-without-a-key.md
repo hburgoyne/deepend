@@ -66,20 +66,83 @@ platform; needs verification per account, same caveat as `WAKE.md` notes.)
 ### Option C: hook-generated keypair + owner-approved pairing (recommended)
 
 Flip who creates the secret: the hook generates a keypair locally on first
-run and prints the public key fingerprint. The owner approves that
-fingerprint once in room settings ("pair this hook"). Afterwards the hook
-signs wake requests; the API verifies against the paired public key.
+run and prints a short fingerprint. The owner approves that fingerprint once
+in room settings ("pair this hook"). Afterwards the hook signs wake
+requests; the API verifies against the paired public key.
 
 What the API would need:
-- A pairing endpoint/UI: list pending pairings, approve/revoke, show
-  fingerprint and creation time.
+- A pairing endpoint/UI: list pending pairings, approve/deny/revoke, show
+  fingerprint, machine label, and request time.
 - Signature verification on `GET /v1/wake` (or a new `/v1/wake-signed`),
   with timestamp/nonce replay protection.
-- A rotation story: re-pairing must be as easy as the first pairing.
+- A rotation story: re-pairing must be as easy as the first pairing
+  (ideally, rotation needs no human at all — see below).
 
-Why this is the best ratio: the owner never handles, pastes, or stores a
-server-issued secret — they only recognize a fingerprint they saw locally.
-The private key never leaves the owner's machine. Revocation is one click.
+#### User experience walkthrough
+
+**First run — pairing (about a minute, no secrets handled):**
+
+1. You install the hook script and register it. Nothing secret is needed.
+2. On its first poll, the hook generates an Ed25519 keypair in its own
+   state directory (private key `0600`, never leaves your machine) and
+   computes a short fingerprint, e.g. `7F3A-9C2E-41BD`.
+3. The hook cannot authenticate yet, so it surfaces exactly one pairing
+   request — through whichever channel you chose for hook notices —
+   saying: "A Deepend hook wants to pair. Fingerprint `7F3A-9C2E-41BD`.
+   Approve it in room settings → Paired hooks." Then it goes quiet; it
+   never wakes the worker until it is paired.
+4. You open room settings → Paired hooks and see: "Pending: hook from
+   \<your machine label\>, fingerprint `7F3A-9C2E-41BD`, requested 2 min
+   ago." You compare the fingerprint with the one the hook showed you —
+   the same glance-and-compare you would do with a Signal safety number.
+5. You click Approve (optionally naming it, e.g. "laptop hook"). Done.
+
+At no point did you copy, paste, or even see a secret. The private key was
+born on your machine and never traveled anywhere.
+
+**Day to day:** nothing. Polls are signed transparently. Unlike today's
+wake keys, paired hook keys should *not* expire every 30 days — revocation
+replaces expiry as the control, and rotation can be automatic (next
+paragraph).
+
+**Rotation without you:** when it is time to rotate, the hook generates a
+new keypair itself and sends "rotate from fingerprint A to fingerprint B",
+signed with the old private key. The server accepts it with no human
+involved. You only re-pair manually if the private key file is lost — in
+which case it is just the one-minute pairing flow again, and you revoke
+the stale pairing with one click.
+
+**If something looks wrong:** a pairing request you do not recognize gets
+Denied. An unpaired hook can never wake the worker, so the safe default is
+denial. If a machine is compromised or sold, you revoke its pairing in
+settings — one click, nothing to rotate everywhere, because the private key
+only ever lived on that machine.
+
+**If the fingerprint does not match** what your hook printed, something is
+intercepting or impersonating — deny it and investigate. The whole scheme
+rests on that comparison step, so fingerprints must be short enough to
+actually compare (8–12 grouped characters; full hash available for the
+paranoid).
+
+#### Compared with today's wake-key UX
+
+| | Wake-only key (today) | Paired hook key |
+|---|---|---|
+| Human handles a secret | Yes — copy from settings, paste into a file | No — only compares a fingerprint |
+| Permission footguns | Yes — file must be exactly 0600, non-symlink, owned by you, or the hook silently never runs | No — the hook owns its key files |
+| Recurring toil | Every ~30 days: key expires, 401 notice, repeat setup | ~Never — rotation is automatic, revocation is one click |
+| Losing the credential | Re-do the entire setup | Re-pair in about a minute |
+| Revoking access | Replace the key and re-paste it everywhere it was saved | One click in settings |
+
+The failure mode stays the same in the good way: anything misconfigured
+fails closed and silent — a broken hook never wakes the worker.
+
+Why this is the best ratio of the three options: the owner never handles,
+pastes, or stores a server-issued secret — they only recognize a
+fingerprint they saw locally. The private key never leaves the owner's
+machine. Revocation is one click, rotation is automatic, and the setup
+ceremony is a single compare-and-approve moment instead of secret
+plumbing every 30 days.
 
 ### Non-starters
 
