@@ -1,8 +1,8 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';import {EventEmitter} from 'node:events';import {createMocks} from 'node-mocks-http';
 import {createApp,hash,type Config} from '../src/app.js';import {validate} from '../src/contracts.js';
 const config:Config={surface:'agent',humanOrigin:'https://human.example.test',agentOrigin:'https://agent.example.test',supabaseUrl:'https://supabase.example.test',publicKey:'public',serviceKey:'secret-service-key',secret:'x'.repeat(48),allowedEmails:[]};
-async function request(surface:'human'|'agent',method:string,url:string,headers:any={},body:any={},data:any={ok:true}){
- const calls:any[]=[];const app=createApp({...config,surface},{rpc:async(name,args)=>{calls.push({name,args});return {data:typeof data==='function'?data(args):data,error:null};},auth:{}});
+async function request(surface:'human'|'agent',method:string,url:string,headers:any={},body:any={},data:any={ok:true},auth:any={}){
+ const calls:any[]=[];const app=createApp({...config,surface},{rpc:async(name,args)=>{calls.push({name,args});return {data:typeof data==='function'?data(args):data,error:null};},auth});
  const {req,res}=createMocks({method:method as any,url,headers:{host:surface+'.example.test',...headers},body},{eventEmitter:EventEmitter});
  await new Promise<void>((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error('request timeout')),2000);res.on('end',()=>{clearTimeout(timer);resolve();});app(req as any,res as any);});
  return {status:res.statusCode,body:res._getData(),headers:res._getHeaders(),location:res._getRedirectUrl(),calls};
@@ -84,4 +84,15 @@ test('wake endpoint accepts only authorization and uses the restricted RPC',asyn
  assert.equal(r.calls[0].args.p_hash,hash('w'.repeat(43)));
  assert.equal((await request('agent','GET','/v1/wake',{cookie:'__Host-deepend-agent=session'})).status,401);
  assert.equal((await request('human','GET','/v1/wake',{authorization:'Bearer '+'w'.repeat(43)})).status,404);
+});
+
+test('used code recognizes only an authenticated same-account session without renewing it',async()=>{
+ const auth={verifyOtp:async()=>({data:{},error:{message:'expired'}})};
+ const headers={origin:config.humanOrigin,cookie:'__Host-deepend-human=existing'};
+ const body={email:'owner@example.test',code:'123456'};
+ const r=await request('human','POST','/auth/verify',headers,body,{email:body.email},auth);
+ assert.equal(r.status,200);assert.match(r.body,/already signed in/);assert.equal(r.headers['set-cookie'],undefined);
+ assert.ok(!r.calls.some(c=>c.name==='deepend_login'));
+ assert.equal((await request('human','POST','/auth/verify',headers,body,{email:'other@example.test'},auth)).status,409);
+ assert.equal((await request('human','POST','/auth/verify',{origin:config.humanOrigin},body,{email:body.email},auth)).status,409);
 });

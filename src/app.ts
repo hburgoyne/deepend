@@ -77,7 +77,14 @@ export function createApp(c:Config, injected?:{rpc:(name:string,args:any)=>Promi
   app.post('/auth/verify',async(req,res)=>{
    await call(req,'auth.rate',{},null,'public','');const email=z.string().email().max(254).parse(req.body.email).toLowerCase(),code=z.string().regex(/^\d{6,10}$/).parse(req.body.code);
    if(c.allowedEmails.length&&!c.allowedEmails.includes(email))throw new Error('enrollment_closed');
-   const {data,error}=await auth.verifyOtp({email,token:code,type:'email'});if(error||!data.user?.id||!data.session)throw new Error('invalid_code');
+   const {data,error}=await auth.verifyOtp({email,token:code,type:'email'});if(error||!data.user?.id||!data.session){
+    // A second submission can arrive after the first has consumed the one-use code.
+    // Recognize an existing same-account session without renewing its freshness.
+    let signedIn=false;
+    try{signedIn=(await call(req,'home')).email===email;}catch{}
+    if(signedIn)return show(res,page('You’re already signed in','<p>Your existing sign-in is active. This code could not be used again.</p><a class="button" href="/">Continue to Deepend</a><p>If you were verifying your identity for a protected action, request a new code.</p><a href="/reauth">Get a new code</a>'));
+    throw new Error('invalid_code');
+   }
    const session=token();const saved=await db.rpc('deepend_login',{p_id:data.user.id,p_email:data.user.email,p_hash:hash(session)});if(saved.error)throw new Error('database_rejected');
    setCookie(res,session,86400);res.redirect(303,'/');
   });

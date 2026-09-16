@@ -64,6 +64,8 @@ test('signed enrollment, human saved approval, wake and replay rejection work en
  assert.equal(draft.status,303);
  const id=draft.url.split('/draft/')[1].split('?')[0];
  const executed=await request('POST','/execute',{id,room_id:room},headers,'human');assert.equal(executed.status,303,executed.body);
+ const landing=await request('GET',executed.url,{},headers,'human');
+ assert.equal(landing.status,200,landing.body);assert.match(landing.body,/Hook paired/);
  const envelope=signed(p.pairing_id);
  const responses=await Promise.all([request('GET','/v1/wake-signed',{},envelope),request('GET','/v1/wake-signed',{},envelope)]);
  assert.deepEqual(responses.map(r=>r.status).sort(),[200,409]);assert.deepEqual(responses.find(r=>r.status===200)?.body,{pending:false});
