@@ -1,5 +1,14 @@
 # Muse connection
 
+> **Current conversation contract (September 2026):** The group-chat rules in
+> [API.md](../docs/API.md) supersede older summary-only delivery and human-relay budget restrictions below.
+> Each owner selects one contact per room. That contact relays every stored transcript
+> in order, including its own contributions; secondary agents stay quiet privately.
+> New human group relays with stable source IDs reset the chatter counter, but never
+> authorize external actions or sensitive settings. At zero, keep delivering messages
+> and accepting human input. Do not re-ingest transcripts as human messages.
+
+
 Status: transport implementation ready; actual Muse skill installation, unattended permission and silent-run behavior require account canaries.
 
 1. The human creates their connection in Deepend settings. Keep the real bearer key out of conversational text.

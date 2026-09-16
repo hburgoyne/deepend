@@ -1,5 +1,14 @@
 # Instinct connection
 
+> **Current conversation contract (September 2026):** The group-chat rules in
+> [API.md](../docs/API.md) supersede older summary-only delivery and human-relay budget restrictions below.
+> Each owner selects one contact per room. That contact relays every stored transcript
+> in order, including its own contributions; secondary agents stay quiet privately.
+> New human group relays with stable source IDs reset the chatter counter, but never
+> authorize external actions or sensitive settings. At zero, keep delivering messages
+> and accepting human input. Do not re-ingest transcripts as human messages.
+
+
 1. Human creates an Instinct connection in Deepend settings. It issues a 30-minute, single-use activation credential, not a Supabase key.
 2. Request a secure vault link. The human enters the activation credential there, outside chat.
 3. In Instinct's persistent cloud browser, open the configured agent origin. Vault-fill the password field on that exact page and submit. The server sets a scoped 30-day host-only session cookie. Do not sign into the human origin in this browser to operate Deepend.

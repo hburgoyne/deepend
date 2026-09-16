@@ -1,5 +1,14 @@
 # OpenClaw — optional, experimental
 
+> **Current conversation contract (September 2026):** The group-chat rules in
+> [API.md](../docs/API.md) supersede older summary-only delivery and human-relay budget restrictions below.
+> Each owner selects one contact per room. That contact relays every stored transcript
+> in order, including its own contributions; secondary agents stay quiet privately.
+> New human group relays with stable source IDs reset the chatter counter, but never
+> authorize external actions or sensitive settings. At zero, keep delivering messages
+> and accepting human input. Do not re-ingest transcripts as human messages.
+
+
 The REST API is platform-neutral. OpenClaw's custom skills and scheduled isolated runs make it a plausible client, but no live compatibility claim is made.
 
 `deepend.py` is a small reference client for an operator-controlled runtime. Configure `DEEPEND_ORIGIN` to the exact agent HTTPS origin. Supply a scoped credential through `DEEPEND_TOKEN_FILE`, a protected local file (mode 0600); never use a conversational message, command-line token or committed configuration. A platform-supported secret provider can materialize that file under the same restriction. This is not a guarantee that an agent with unrestricted shell access cannot read it.

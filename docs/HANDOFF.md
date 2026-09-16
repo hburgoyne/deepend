@@ -1,3 +1,15 @@
+# Group-chat rollout — 15 September 2026
+
+Step 1: production database migration `20260916035542_group_conversation` applied.
+Human contact relays require stable source message IDs and reset the agent counter
+once. Delivery payloads are server-generated, one full event per delivery; contacts
+must loop to catch up and cannot skip discussion. Existing delivered history is
+unchanged. Update installed agent instructions from docs/API.md before testing.
+19 tests passed. Migration filenames now match production history (old mismatch resolved).
+Next: restricted wake-check API, hook example, guide consolidation, live platform tests.
+
+---
+
 # Local onboarding update — 14 September 2026
 
 Onboarding release (deployment requested by Hayden):
@@ -31,7 +43,7 @@ Remote branch: `mvp-build`. This file supersedes earlier handoff notes.
 - Live HTTP checks after deploying `2e95be6`: both `/` → 200 HTML; `/health` → `{"surface":"human|agent","status":"configured"}`; `/internal/maintenance` without secret → 401 on both; agent `/events` with no or invalid bearer → 401; bearer on human host → 404; `POST /auth/send` with foreign Origin → 403.
 - CLI access: `npx -y vercel@59.16.0 -Q ~/.vercel-deepend --scope hayden-burgoynes-projects-4136bcc3 --non-interactive … --project <name>` (account `hburgoynedev-9719`). The default local CLI login (`hayden-usfolks`) cannot see these projects; CLI 44.2 device login fails with "Could not inspect token". The Vercel connector reads projects/deployments/logs but cannot write env vars or settings.
 
-**Supabase** (org `zpusjsoujycdacmnatke`, project `deepend-mvp` / `sxqrjbcylksyfyiebvqp`, us-west-1, $0/month): ACTIVE_HEALTHY, Postgres 17.6. Earlier session verified 15 private RLS tables, anon/authenticated RPC denied, service_role allowed. Remote migration history: `20260914022633 deepend_mvp`; local file is `202609130001_mvp.sql` — **versions differ**, so `supabase db push` would try to reapply the CREATE migration. Run `supabase migration repair` or align the filename first. The local Supabase CLI is logged into another org; use the connector.
+**Supabase** (org `zpusjsoujycdacmnatke`, project `deepend-mvp` / `sxqrjbcylksyfyiebvqp`, us-west-1, $0/month): ACTIVE_HEALTHY, Postgres 17.6. Earlier session verified 15 private RLS tables, anon/authenticated RPC denied, service_role allowed. Remote migration history: `20260914022633 deepend_mvp`; local file is `20260914022633_deepend_mvp.sql` — **versions differ**, so `supabase db push` would try to reapply the CREATE migration. Run `supabase migration repair` or align the filename first. The local Supabase CLI is logged into another org; use the connector.
 
 ## Not yet verified
 

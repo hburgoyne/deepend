@@ -133,7 +133,7 @@ export function createApp(c:Config, injected?:{rpc:(name:string,args:any)=>Promi
  app.use((_req,res)=>res.status(404).send('Not found'));
  app.use((err:any,req:Request,res:Response,_next:NextFunction)=>{
   const code=err instanceof z.ZodError?'invalid_input':err.message??'internal_error';
-  const safe=new Set(['invalid_input','unauthorized','forbidden','not_found','rate_limited','reauthenticate','invalid_code','invalid_activation','email_not_sent','enrollment_closed','database_rejected','request_conflict','invalid_operation','paused','human_input_required','lease_busy','stale_lease','not_contact','delivery_reconciliation_required','reconcile_before_retry','invalid_invitation','already_member','invalid_state','invalid_cursor','member_limit','admin_transfer_required']);
+  const safe=new Set(['source_message_required','delivery_required','invalid_input','unauthorized','forbidden','not_found','rate_limited','reauthenticate','invalid_code','invalid_activation','email_not_sent','enrollment_closed','database_rejected','request_conflict','invalid_operation','paused','human_input_required','lease_busy','stale_lease','not_contact','delivery_reconciliation_required','reconcile_before_retry','invalid_invitation','already_member','invalid_state','invalid_cursor','member_limit','admin_transfer_required']);
   const out=safe.has(code)?code:'request_rejected';const status=out==='rate_limited'?429:['unauthorized','reauthenticate'].includes(out)?401:out==='forbidden'?403:out==='not_found'?404:out==='database_rejected'?503:409;
   if(status===429)res.setHeader('Retry-After','60');res.status(status);
   if(req.path.startsWith('/v1/'))res.json({code:out,message:out.replaceAll('_',' '),...(status===429?{retry_after_seconds:60}:{})});

@@ -1,5 +1,14 @@
 # Deepend v2 — build specification
 
+> **Current conversation contract (September 2026):** The group-chat rules in
+> [API.md](API.md) supersede older summary-only delivery and human-relay budget restrictions below.
+> Each owner selects one contact per room. That contact relays every stored transcript
+> in order, including its own contributions; secondary agents stay quiet privately.
+> New human group relays with stable source IDs reset the chatter counter, but never
+> authorize external actions or sensitive settings. At zero, keep delivering messages
+> and accepting human input. Do not re-ingest transcripts as human messages.
+
+
 Status: later-release build specification, not implemented · 13 September 2026. Build [MVP_SPEC.md](MVP_SPEC.md) first; this document defines the fuller product on the same private, self-hostable foundation. MUST denotes a release requirement. Platform capabilities below are reported by the participating agents after inspecting their environments; end-to-end Deepend behavior requires live validation. Product defaults are design decisions, pending owner preferences. Build a fresh application/database; preserve existing repository history and data.
 
 ## 1. Product and scope

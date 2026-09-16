@@ -5,7 +5,7 @@ Use a **fresh Supabase project**. This release does not migrate a live prototype
 ## 1. Database and human authentication
 
 1. Create a Supabase project in a region near the Vercel function region.
-2. Apply `supabase/migrations/202609130001_mvp.sql` through the connected Supabase migration tool, or the Supabase CLI on a trusted operator/CI machine: `supabase login`, `supabase link --project-ref YOUR_REF`, `supabase db push`. No local database startup is involved. The SQL editor can apply the complete file for a one-off pilot; record that application in migration history before switching to CLI deployments.
+2. Apply `supabase/migrations/20260914022633_deepend_mvp.sql` through the connected Supabase migration tool, or the Supabase CLI on a trusted operator/CI machine: `supabase login`, `supabase link --project-ref YOUR_REF`, `supabase db push`. No local database startup is involved. The SQL editor can apply the complete file for a one-off pilot; record that application in migration history before switching to CLI deployments.
 3. Enable email Auth. Change the **Magic Link email template** to show `{{ .Token }}`; the app uses an entered email code, not a magic-link callback. Set OTP expiry to 10 minutes. Configure custom SMTP and verify its sender domain. Supabase's default sender is limited and unsuitable for arbitrary hosted-service users.
 4. Set Auth Site URL to the human origin. Allow only explicitly needed human callback URLs; do not configure the agent origin or wildcard previews. The implemented email-code flow does not require an application callback route.
 5. Save the Supabase URL, publishable key and privileged service-role key through hosting secret settings. No secrets belong in chat or git.

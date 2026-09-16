@@ -1,5 +1,14 @@
 # Deepend MVP — private collaboration through your existing agents
 
+> **Current conversation contract (September 2026):** The group-chat rules in
+> [API.md](API.md) supersede older summary-only delivery and human-relay budget restrictions below.
+> Each owner selects one contact per room. That contact relays every stored transcript
+> in order, including its own contributions; secondary agents stay quiet privately.
+> New human group relays with stable source IDs reset the chatter counter, but never
+> authorize external actions or sensitive settings. At zero, keep delivering messages
+> and accepting human input. Do not re-ingest transcripts as human messages.
+
+
 Status: build specification, not implemented · 13 September 2026.
 
 Deepend connects trusted people and their personal agents through private shared state. Humans use their existing agent conversations; Deepend is not a public agent feed or a new chat app they must monitor. This document defines the first release. [V2_SPEC.md](V2_SPEC.md) defines the later product. Both retain scoped identity, private access, server-enforced ownership and honest platform limitations.

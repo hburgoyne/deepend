@@ -1,6 +1,6 @@
 import {test,before,after} from 'node:test';
 import assert from 'node:assert/strict';
-import {readFile} from 'node:fs/promises';
+import {readFile,readdir} from 'node:fs/promises';
 import {randomUUID} from 'node:crypto';
 import {PGlite} from '@electric-sql/pglite';
 const db=new PGlite();
@@ -9,7 +9,7 @@ async function call(kind:string,key:string,op:string,body:any={},request=randomU
 async function human(key:string,op:string,body:any={}){return call('human',key,op,body);}
 before(async()=>{
  await db.exec('create role anon; create role authenticated; create role service_role bypassrls;');
- await db.exec(await readFile('supabase/migrations/202609130001_mvp.sql','utf8')).catch(e=>{throw new Error(e.message)});
+ for(const file of (await readdir('supabase/migrations')).filter(f=>f.endsWith('.sql')).sort()) await db.exec(await readFile('supabase/migrations/'+file,'utf8'));
  await db.query('select public.deepend_login($1,$2,$3)',[h1,'a@example.test','h1']);await db.query('select public.deepend_login($1,$2,$3)',[h2,'b@example.test','h2']);
  room=(await human('h1','room.create',{title:'Private pilot'})).room_id;other=(await human('h2','room.create',{title:'Other room'})).room_id;
  c1=(await human('h1','connection.create',{room_id:room,name:'Muse A',platform:'muse',kind:'bearer',token_hash:'a1'})).connection_id;
@@ -73,6 +73,53 @@ test('activation single-use, expiration, revoked reads and kill switch',async()=
  await db.exec('update deepend.control set paused=false');
  await human('h1','member.remove',{room_id:room,human_id:h2});assert.equal((await call('agent','cookie','state')).error,'unauthorized');
  await db.exec("update deepend.credentials set expires_at=now()-interval '1 second' where hash='a2'");assert.equal((await call('agent','a2','state')).error,'unauthorized');
+});
+test('human group relays reset exhausted chatter once and only through the owner contact',async()=>{
+ await human('h1','contact.set',{room_id:room,connection_id:c1});
+ await db.query('update deepend.rooms set budget=0 where id=$1',[room]);
+ const b={body:'Next round',relay:'true',source_message_id:'side-thread:human-message-1'};
+ assert.equal((await call('agent','a1','message',{body:'agent chatter'})).error,'human_input_required');
+ assert.equal((await call('agent','a1','message',{body:'human?',relay:'true'})).error,'source_message_required');
+ const first=await call('agent','a1','message',b);assert.ok(first.seq);
+ assert.equal((await call('agent','a1','state')).room.budget,8);
+ await call('agent','a1','message',{body:'A response'});
+ assert.equal((await call('agent','a1','message',b)).seq,first.seq);
+ assert.equal((await call('agent','a1','state')).room.budget,7);
+ assert.equal((await call('agent','a1','message',{...b,body:'Altered text'})).error,'request_conflict');
+});
+test('deliveries contain exact ordered events, ignore summaries and cannot skip discussion',async()=>{
+ await db.exec('delete from deepend.rates');
+ const state=await call('agent','a1','state');
+ const d=await call('agent','a1','delivery.prepare',{through:state.room.seq,payload:'Hide the conversation'});
+ assert.ok(d.payload.includes('[#'+d.source_end+']'));
+ assert.ok(!d.payload.includes('Hide the conversation'));
+ assert.equal(d.source_start,d.source_end);
+ assert.equal((await call('agent','a1','delivery.result',{delivery_id:d.id,outcome:'skipped'})).error,'delivery_required');
+ await call('agent','a1','delivery.claim',{delivery_id:d.id});
+ await call('agent','a1','delivery.result',{delivery_id:d.id,outcome:'delivered'});
+ const next=await call('agent','a1','delivery.prepare',{through:state.room.seq});
+ assert.equal(next.source_start,d.source_end+1);
+});
+test('each owner has an independent contact and receives the same full conversation',async()=>{
+ await db.exec('delete from deepend.rates');
+ const r=(await human('h1','room.create',{title:'Two owners'})).room_id;
+ await human('h1','invite.create',{room_id:r,token_hash:'two-owners'});
+ await human('h2','invite.accept',{token_hash:'two-owners'});
+ await human('h1','member.confirm',{room_id:r,human_id:h2});
+ const a=(await human('h1','connection.create',{room_id:r,name:'A',platform:'muse',kind:'bearer',token_hash:'owner-a'})).connection_id;
+ const b=(await human('h2','connection.create',{room_id:r,name:'B',platform:'muse',kind:'bearer',token_hash:'owner-b'})).connection_id;
+ await human('h1','contact.set',{room_id:r,connection_id:a});
+ await human('h2','contact.set',{room_id:r,connection_id:b});
+ assert.equal((await human('h1','contact.set',{room_id:r,connection_id:b})).error,'forbidden');
+ await call('agent','owner-a','message',{body:'Full text, not a summary.\nSecond line.'});
+ const da=await call('agent','owner-a','delivery.prepare',{through:1});
+ const dbb=await call('agent','owner-b','delivery.prepare',{through:1});
+ assert.equal(da.payload,'[#1] A\nFull text, not a summary.\nSecond line.');
+ assert.equal(da.payload,dbb.payload);assert.notEqual(da.id,dbb.id);
+ assert.equal((await call('agent','owner-a','delivery.claim',{delivery_id:dbb.id})).error,'not_contact');
+ await call('agent','owner-a','delivery.claim',{delivery_id:da.id});
+ await call('agent','owner-a','delivery.result',{delivery_id:da.id,outcome:'delivered'});
+ assert.equal((await call('agent','owner-b','delivery.prepare',{through:1})).id,dbb.id);
 });
 test('database denies public tables and server-only RPC; fresh login required',async()=>{
  await db.exec('set role anon');await assert.rejects(db.query('select * from deepend.rooms'));await assert.rejects(db.query("select public.deepend_call('human','h1','home')"));await db.exec('reset role');
