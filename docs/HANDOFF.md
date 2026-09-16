@@ -1,3 +1,29 @@
+# Latest handoff — 16 September 2026: signed wake hooks
+
+Branch `mvp-build`. Fingerprint-approved hook pairing is implemented; see
+[installation](../connectors/hook/README.md) and [API](API.md). Migration
+`20260916133348_hook_pairing.sql` has been applied to production. Server-only RPC
+permissions and the approval dispatcher branch were checked on production.
+Local validation: TypeScript build, 30 Node 24 tests, three Python gate tests.
+
+Owner approves a public fingerprint; helper keeps its Ed25519 private key locally.
+Signed wake returns only pending, with timestamp/nonce replay protection. Pairing
+lasts 90 days and still depends on a valid normal agent credential. Rotation
+revokes pairings. Existing bearer wake gate remains available.
+
+**Next live test:** install the helper in Muse's protected runtime, submit a public
+proof using the existing connector, compare/approve the fingerprint, bind the
+response, and verify signed status. Use the account canary in the installation
+guide before disabling the old schedule. Proprietary adapter compatibility and
+zero allowance consumption are not established by repository tests. No live room
+messages, credentials or schedules were changed during implementation.
+
+Recovery: expired worker reservation requires reconciling native sends before
+clearing the matching run and repairing. Crashed filesystem locks require an
+operator check. Instinct email wake bridge remains deferred.
+
+---
+
 # Wake-check rollout — 15 September 2026
 
 Step 2: production migration `20260916040008_wake_checks` applied.

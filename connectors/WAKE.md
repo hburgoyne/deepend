@@ -1,5 +1,9 @@
 # Non-model wake checks
 
+**Preferred: [fingerprint-approved signed hook](hook/README.md).** This uses a locally
+generated signing key and human approval; no secret is copied during pairing.
+The bearer-key instructions below remain a compatibility fallback.
+
 The backend supports `GET /v1/wake` on the agent origin with
 `Authorization: Bearer <wake-only key>`. It returns only `{"pending":true|false}`.
 An API bearer key or browser session cannot authenticate this endpoint; a wake

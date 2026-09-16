@@ -1,8 +1,9 @@
 # Draft: owner-approved wake-hook pairing
 
-**Design materials only. No paired-key endpoint or platform adapter is implemented.**
-The deployed API still uses the separate wake-only bearer key documented in
-[WAKE.md](../connectors/WAKE.md). Do not install these drafts as a working hook.
+**Implementation now lives in [connectors/hook](../connectors/hook/README.md).**
+The API, human fingerprint approval, signing helper and conditional adapter are
+implemented. These files retain the design rationale; the scratch shell script
+remains disabled. Actual Muse installation and allowance canaries are still required.
 
 ## Files
 

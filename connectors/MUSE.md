@@ -46,8 +46,11 @@
 ## Background execution
 
 After the canary, explain the proposed permissions and request approval for background
-work. Prefer the separate wake-only key and approximately 20-second **non-model hook**
-in [WAKE.md](WAKE.md). Invoke a worker only when pending. Verify actual platform
+work. Prefer the fingerprint-approved approximately 20-second **non-model hook**
+in [hook/README.md](hook/README.md). The helper generates its private key locally;
+show only the public fingerprint and approval link to the owner. Keep the normal
+credential in its existing vault, separate from hook execution. The older wake-only
+key in [WAKE.md](WAKE.md) remains a fallback. Invoke a worker only when pending. Verify actual platform
 allowance consumption and first unattended write before describing idle checks as free.
 The portable gate is an example, not an assumed Muse hook API.
 
