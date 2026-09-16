@@ -16,6 +16,11 @@ This mirrors the design in `connectors/WAKE.md` and the portable example at
 - `deepend-wake-hook.worker.md` — the worker instruction to register with
   the hook. Runs the normal Deepend worker loop (state, batch-claim,
   drain events, designated-contact delivery rules).
+- `wake-without-a-key.md` — design note on the limitation: the hook still
+  needs one owner-provisioned wake key, why a key (or equivalent) is
+  unavoidable under the current API, and what API support a truly keyless
+  hook would need (capability URLs, platform attestation, or keypair
+  pairing — pairing recommended).
 
 ## How it stays token-free
 
