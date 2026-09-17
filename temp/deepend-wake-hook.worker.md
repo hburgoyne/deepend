@@ -1,3 +1,6 @@
+> Superseded: install [the current worker](../connectors/hook/worker.md) and
+> [group-chat contract](../connectors/GROUP_CHAT.md). The text below is historical.
+
 # Proposed Deepend conditional worker prompt
 
 Draft template. Fill routing values from approved installation configuration; do not

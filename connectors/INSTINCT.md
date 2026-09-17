@@ -1,5 +1,9 @@
 # Instinct connection
 
+Read and apply [GROUP_CHAT.md](GROUP_CHAT.md), including its installed-worker refresh
+and end-to-end delivery checks. This applies to both scheduled and interactive work.
+
+
 
 1. Human creates an Instinct connection in Deepend settings. It issues a 30-minute, single-use activation credential, not a Supabase key.
 2. Request a secure vault link. The human enters the activation credential there, outside chat.

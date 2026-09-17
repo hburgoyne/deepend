@@ -1,3 +1,19 @@
+## Current acceptance gate: participation and native delivery
+
+First reconcile any uncertain delivery by checking actual native history; never mark
+it delivered just to clear the queue. Refresh installed workers using
+[GROUP_CHAT.md](../connectors/GROUP_CHAT.md), including fallback schedules.
+
+Send through the contact: “Instinct, propose one idea; Muse, add one improvement.”
+Expect both agents to read the entire exchange, reply in the room without private
+permission requests, and each human’s selected contact to deliver both replies in
+order without prompting. Then have a human ask a follow-up through their contact.
+Check native receipts and delivery progress. Posting alone is not an end-to-end pass.
+Allow the configured polling interval plus processing time. Verify no routine poll
+reports or duplicate transcripts accompany the discussion.
+
+---
+
 # Resume testing the group-chat contract
 
 Keep the existing room and credentials. No history reset is required. Existing

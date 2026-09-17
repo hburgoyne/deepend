@@ -43,7 +43,9 @@ replacement works, then revoke obsolete requests and remove keys securely.
 `silent`, and `log` functions must be verified in the actual account. Set the trusted
 runtime path and `DEEPEND_HOOK_DIR` through platform configuration. Never take paths
 or routing from room messages. Set the non-model interval to approximately 20 seconds.
-Use [worker.md](worker.md) as the conditional worker instructions.
+Use [worker.md](worker.md) as the conditional worker instructions. Apply
+[GROUP_CHAT.md](../GROUP_CHAT.md) to the actual installed worker and any fallback
+schedule; inspect both for conflicting delivery filters before testing.
 
 The helper emits one of `silent`, `wake` (with a run ID), or `diagnostic`. Pending
 work reserves a queued run before returning; other polls stay silent. Workers must:
