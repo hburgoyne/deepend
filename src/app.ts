@@ -6,7 +6,7 @@ import {z} from 'zod';
 import {registerHook,signedHook,pairingPage,pairingList} from './hooks.js';
 import {operations,reads,validate} from './contracts.js';
 import {humanAction,needsReview,setupInstructions,successNotice} from './onboarding.js';
-import {esc,page,login,home,roomView,agentView,hidden,json} from './views.js';
+import {esc,page,login,home,roomView,agentView,hidden,json,codeEntry} from './views.js';
 export const hash=(v:string)=>createHash('sha256').update(v).digest('hex');
 const token=()=>randomBytes(32).toString('base64url');
 export interface Config {surface:'human'|'agent';humanOrigin:string;agentOrigin:string;supabaseUrl:string;publicKey:string;serviceKey:string;secret:string;allowedEmails:string[];cronSecret?:string}
@@ -40,7 +40,8 @@ export function createApp(c:Config, injected?:{rpc:(name:string,args:any)=>Promi
  });
  const show=(res:Response,html:string)=>{
   const style=html.match(/<style>([\s\S]*?)<\/style>/)?.[1]??'';
-  res.setHeader('Content-Security-Policy',`default-src 'none'; style-src 'sha256-${createHash('sha256').update(style).digest('base64')}'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'; object-src 'none'`);
+  const scriptHashes=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m=>"'sha256-"+createHash('sha256').update(m[1]).digest('base64')+"'").join(' ');
+  res.setHeader('Content-Security-Policy',`default-src 'none'; ${scriptHashes?'script-src '+scriptHashes+'; ':''}style-src 'sha256-${createHash('sha256').update(style).digest('base64')}'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'; object-src 'none'`);
   res.type('html').send(html);
  };
  app.disable('x-powered-by');
@@ -69,13 +70,13 @@ export function createApp(c:Config, injected?:{rpc:(name:string,args:any)=>Promi
  if(!isAgent){
   app.get('/reauth',(_req,res)=>show(res,login(false)));
   app.post('/auth/send',async(req,res)=>{
-   await call(req,'auth.rate',{},null,'public','');const email=z.string().email().max(254).parse(req.body.email).toLowerCase();
+   await call(req,'auth.rate',{},null,'public','');const email=z.string().trim().email().max(254).parse(req.body.email).toLowerCase();
    if(c.allowedEmails.length&&!c.allowedEmails.includes(email))throw new Error('enrollment_closed');
    const {error}=await auth.signInWithOtp({email});if(error)throw new Error('email_not_sent');
-   show(res,page('Check your email',`<p>Enter the code below. If no message arrives, check spam or ask the operator to verify SMTP configuration.</p><form method="post" action="/auth/verify">${hidden('email',email)}<label>Email code<input name="code" required autocomplete="one-time-code"></label><button>Verify</button></form>`));
+   show(res,codeEntry(email));
   });
   app.post('/auth/verify',async(req,res)=>{
-   await call(req,'auth.rate',{},null,'public','');const email=z.string().email().max(254).parse(req.body.email).toLowerCase(),code=z.string().regex(/^\d{6,10}$/).parse(req.body.code);
+   await call(req,'auth.rate',{},null,'public','');const email=z.string().trim().email().max(254).parse(req.body.email).toLowerCase(),code=z.string().trim().regex(/^\d{6,10}$/).parse(req.body.code);
    if(c.allowedEmails.length&&!c.allowedEmails.includes(email))throw new Error('enrollment_closed');
    const {data,error}=await auth.verifyOtp({email,token:code,type:'email'});if(error||!data.user?.id||!data.session){
     // A second submission can arrive after the first has consumed the one-use code.
@@ -83,7 +84,7 @@ export function createApp(c:Config, injected?:{rpc:(name:string,args:any)=>Promi
     let signedIn=false;
     try{signedIn=(await call(req,'home')).email===email;}catch{}
     if(signedIn)return show(res,page('You’re already signed in','<p>Your existing sign-in is active. This code could not be used again.</p><a class="button" href="/">Continue to Deepend</a><p>If you were verifying your identity for a protected action, request a new code.</p><a href="/reauth">Get a new code</a>'));
-    throw new Error('invalid_code');
+    res.status(409);return show(res,codeEntry(email,true));
    }
    const session=token();const saved=await db.rpc('deepend_login',{p_id:data.user.id,p_email:data.user.email,p_hash:hash(session)});if(saved.error)throw new Error('database_rejected');
    setCookie(res,session,86400);res.redirect(303,'/');

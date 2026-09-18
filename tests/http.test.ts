@@ -96,3 +96,11 @@ test('used code recognizes only an authenticated same-account session without re
  assert.equal((await request('human','POST','/auth/verify',headers,body,{email:'other@example.test'},auth)).status,409);
  assert.equal((await request('human','POST','/auth/verify',{origin:config.humanOrigin},body,{email:body.email},auth)).status,409);
 });
+test('email-code form keeps recovery on-page and uses passwordless autofill hints',async()=>{
+ const sent=await request('human','POST','/auth/send',{origin:config.humanOrigin},{email:' owner@example.test '},{ok:true},{signInWithOtp:async({email}:any)=>{assert.equal(email,'owner@example.test');return {error:null};}});
+ assert.equal(sent.status,200);assert.match(sent.body,/autocomplete="one-time-code" inputmode="numeric"/);
+ assert.match(String(sent.headers['content-security-policy']),/script-src 'sha256-/);
+ const failed=await request('human','POST','/auth/verify',{origin:config.humanOrigin},{email:'owner@example.test',code:' 123456 '},{ok:true},{verifyOtp:async({token}:any)=>{assert.equal(token,'123456');return {data:{},error:{code:'otp_expired'}};}});
+ assert.equal(failed.status,409);assert.match(failed.body,/Send a new code/);assert.match(failed.body,/owner@example.test/);assert.doesNotMatch(failed.body,/value="123456"/);
+ const login=await request('human','GET','/');assert.match(login.body,/autocomplete="email" inputmode="email"/);
+});
