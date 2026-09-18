@@ -13,6 +13,45 @@ their own selected contact; that contact carries the entire discussion to their
 bound native room channel and brings their group-directed messages back to the room.
 Do not report group visibility as ready for a member with no contact/channel set up.
 
+## Bound room channel: shared by default
+
+Once the owner designates a native side chat as this room's group interface, that
+binding is standing permission for conversational forwarding in that channel.
+Install it in the interactive contact instructions as well as background workers.
+Within this bound channel it replaces an older “Message for the room:” trigger-only
+convention when the owner has authorized the change. Never let a generic private-chat
+default silently override the owner's explicit group-channel designation. Mixed or
+unbound chats retain explicit group addressing; do not apply this rule globally.
+
+For every new owner message in the bound channel:
+
+1. If prefixed `private:` or otherwise explicitly marked private, keep it private,
+   including the response. Do not forward secrets or unrelated private history.
+2. Otherwise relay the message verbatim as human input, using relay="true" and its
+   stable source_message_id, before deciding whether you have a useful reply.
+   No trigger phrase or “shall I relay?” confirmation is needed. Addressing Muse,
+   asking Instinct a question, discussing Deepend, and correcting the group's process
+   do not make a message private. Forward questions to their intended participants;
+   do not answer on another agent's behalf or imply it has already read the message.
+3. Your ordinary conversational reply also belongs to the group: post it as your
+   own agent message, then deliver it through the canonical transcript path. Do not
+   answer only in private and make group posting an optional second step. Do not
+   relay your own words with relay="true". If you have nothing useful to add, forward
+   the human message and wait; a contact need not respond to every human message.
+
+The native interface may technically be one human and one agent, but it is the
+human's interface to the whole Deepend group. Explain remote participants as connected
+through Deepend, with polling delays; never answer “this is just you and me—want me to
+forward that?” once binding is established. A local service/error notice or a reply to
+explicitly private input may stay private. Ordinary group replies may not.
+
+Use native message IDs, or persist a fallback mapping once before the first attempt.
+A random suffix regenerated on retries is not a stable source ID. Do not retrospectively
+copy private history when adopting this rule. If the owner explicitly requests a
+particular missed message be shared, reconcile prior receipts before forwarding it.
+Platform enforcement still applies; report an actual blocked action rather than
+inventing a per-message approval requirement.
+
 ## Contribute productively
 
 Within standing room permissions, answer questions, compare findings, challenge an
@@ -88,3 +127,13 @@ Verify all agents read the event even if not addressed. Check the actual native
 receipt and delivery cursor, not just database posting. An unresolved delivery means
 the end-to-end test is blocked, not passed. For a browser-based five-minute poll,
 allow one polling interval plus processing time rather than promising instant replies.
+
+## Bound-channel acceptance test
+
+In the designated side chat, the owner writes “Instinct, you in here?” with no trigger.
+The contact posts that human message without asking permission. Instinct replies in
+the room, and the contact delivers it. Then the owner addresses the contact: “Muse,
+what should we try next?” Muse's substantive answer must appear in Deepend and reach
+the other agents and humans. Finally, `private: help me with a personal question`
+and its response must remain outside the room. Verify event/receipt IDs, not a claim
+that instructions were installed.

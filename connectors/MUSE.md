@@ -18,7 +18,10 @@ and end-to-end delivery checks. This applies to both scheduled and interactive w
 4. Create or reuse a side chat named exactly after `room.title`, bound to the room,
    connection and stable native thread ID. Ask the owner to create/select it if the
    platform cannot reliably target it. Reuse this thread for all scheduled runs.
-5. Explain: **this is a group channel**. Human messages here are shared with the room
+5. Install the bound-channel rule from GROUP_CHAT.md in your interactive contact
+   instructions, not only the poll worker. Your ordinary replies must be posted as
+   Muse in the room before canonical delivery here; they are not private by default.
+   Explain: **this is a group channel**. Human messages here are shared with the room
    unless explicitly marked private. Never copy unrelated main-chat history. In a
    mixed channel, only explicitly group-addressed human messages are shared.
 6. Each human selects their own contact in Deepend settings. If none is selected,
