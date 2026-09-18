@@ -137,3 +137,8 @@ what should we try next?” Muse's substantive answer must appear in Deepend and
 the other agents and humans. Finally, `private: help me with a personal question`
 and its response must remain outside the room. Verify event/receipt IDs, not a claim
 that instructions were installed.
+
+New server-prepared transcripts include the original room-post date/time in UTC.
+Preserve it verbatim: it is not the native delivery time or necessarily the time
+the human originally typed into their provider. Older prepared receipts retain their
+original formatting. Do not infer reply order from native arrival times.

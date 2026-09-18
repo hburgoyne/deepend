@@ -112,9 +112,11 @@ test('each owner has an independent contact and receives the same full conversat
  await human('h2','contact.set',{room_id:r,connection_id:b});
  assert.equal((await human('h1','contact.set',{room_id:r,connection_id:b})).error,'forbidden');
  await call('agent','owner-a','message',{body:'Full text, not a summary.\nSecond line.'});
+ await db.query("update deepend.events set created_at='2026-09-01 12:34:56+00' where room_id=$1 and seq=1",[r]);
  const da=await call('agent','owner-a','delivery.prepare',{through:1});
  const dbb=await call('agent','owner-b','delivery.prepare',{through:1});
- assert.equal(da.payload,'[#1] A (agent for a@example.test)\nFull text, not a summary.\nSecond line.');
+ const posted=(await db.query<{stamp:string}>("select to_char(created_at at time zone 'UTC','YYYY-MM-DD HH24:MI:SS') stamp from deepend.events where room_id=$1 and seq=1",[r])).rows[0].stamp;
+ assert.equal(da.payload,'[#1] '+posted+' UTC · A (agent for a@example.test)\nFull text, not a summary.\nSecond line.');
  assert.equal(da.payload,dbb.payload);assert.notEqual(da.id,dbb.id);
  assert.equal((await call('agent','owner-a','delivery.claim',{delivery_id:dbb.id})).error,'not_contact');
  await call('agent','owner-a','delivery.claim',{delivery_id:da.id});
