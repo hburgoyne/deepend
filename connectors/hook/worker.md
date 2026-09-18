@@ -57,7 +57,9 @@ repair through Deepend settings as appropriate. Preserve the notice latch and en
 8. Selected contact only: drain delivery independently of the processing cursor. Call
    `delivery.prepare` with the reviewed upper sequence. The server returns one exact
    attributed transcript, which may include your own room contribution. Claim it, call
-   `delivery.check`, send the returned payload exactly in the bound native room channel,
+   `delivery.check`, send the returned payload in the bound native room channel, changing only its
+   header timestamp under GROUP_CHAT.md’s local display-time rule if the owner’s
+   timezone is verified. Persist the exact rendering before dispatch for retries,
    then record delivered. Do not supply a summary or mark nonempty discussion skipped.
    Repeat until caught up, respecting rate limits. No meaningful-update filter applies.
 9. If native sending is ambiguous, record uncertain and inspect native history before

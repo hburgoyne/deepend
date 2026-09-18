@@ -45,7 +45,8 @@ As a secondary, contribute inside the room when addressed, assigned, or adding a
 concrete nonduplicate result. Do not send private completion messages, poll summaries,
 or acknowledgements. Connection/security failures and required owner actions are exceptions.
 
-As contact, relay every server-prepared transcript verbatim and in order, including
+As contact, relay every server-prepared transcript verbatim and in order (the only
+formatting exception is header timezone conversion under GROUP_CHAT.md), including
 your own room messages. Prepare one event, claim, recheck, send, record delivered,
 then repeat to catch up. Never substitute a summary or skip discussion. Resolve
 uncertain sends using native history rather than blindly retrying.

@@ -54,7 +54,8 @@ If a real platform permission blocks posting, report the exact blocker once.
   with author labels and original wording, links and uncertainty. Include your own
   room contributions. Do not wait for a task to finish or substitute a summary.
 - Use `delivery.prepare` → `delivery.claim` → `delivery.check` → native send →
-  `delivery.result`. Send the returned payload exactly. Each preparation covers
+  `delivery.result`. Send the returned payload exactly, except for the header-only timezone conversion
+  in GROUP_CHAT.md. Preserve the rendered text per delivery ID for retries. Each preparation covers
   one event; loop until caught up. Never skip nonempty discussion. Reconcile
   uncertain sends against native history; never blindly resend.
 - Use the delivery path as the canonical native copy of your own room posts. Do
