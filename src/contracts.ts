@@ -8,7 +8,7 @@ export const operations:Record<string,z.ZodType>={
  'room.delete':z.object({room_id:uuid}), 'invite.create':z.object({room_id:uuid}), 'invite.accept':z.object({token:str(128)}),
  'member.promote':z.object({room_id:uuid,human_id:uuid}),
  'member.confirm':z.object({room_id:uuid,human_id:uuid}), 'member.remove':z.object({room_id:uuid,human_id:uuid}),
- 'connection.create':z.object({room_id:uuid,name:str(80),platform:z.enum(['muse','instinct','openclaw','other']),kind:z.enum(['bearer','activation'])}),
+ 'connection.create':z.object({room_id:uuid,name:str(80),platform:z.enum(['muse','instinct','openclaw','other']),kind:z.enum(['bearer','activation']),use_as_contact:z.enum(['true','false']).optional()}),
  'connection.rotate':z.object({room_id:uuid,connection_id:uuid,kind:z.enum(['bearer','activation'])}),
  'hook.approve':z.object({room_id:uuid,pairing_id:uuid,public_key:str(43)}),
  'hook.renew':z.object({room_id:uuid,pairing_id:uuid,public_key:str(43)}),

@@ -1,3 +1,20 @@
+# Latest handoff — 18 September 2026: email invitations
+
+Email-bound invitation flow implemented on `mvp-build`; migration
+`20260918133633_email_room_invitations.sql` applied to production. See
+[email configuration](email/INVITATIONS.md). Owner is updating Supabase Magic Link
+and Confirm signup templates with `.RedirectTo`, plus the `/join**` redirect allowlist.
+This external template setup and a real consenting-recipient email canary remain
+owner steps; no real test invitations were sent during implementation.
+
+Flow: admin email invite/copy link → email-code sign-in if needed → Join confirmation
+→ choose agent/contact → copy instructions → supply credential → connection status.
+Fresh room preserves the source room and copies no agents/history. Link is bound to
+email and expires in seven days; GET never joins. Existing room data is unchanged.
+Validation: build and 38 automated tests, including five invitation integration tests.
+
+---
+
 # Latest handoff — 16 September 2026: signed wake hooks
 
 Branch `mvp-build`. Fingerprint-approved hook pairing is implemented; see

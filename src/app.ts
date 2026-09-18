@@ -4,6 +4,7 @@ import {createHash,createHmac,randomBytes,randomUUID,timingSafeEqual} from 'node
 import {parseCookie as parse,stringifySetCookie} from 'cookie';
 import {z} from 'zod';
 import {registerHook,signedHook,pairingPage,pairingList} from './hooks.js';
+import {invitationForm,invitationList,joinLanding,joinConfirmation,connectPage} from './invitations.js';
 import {operations,reads,validate} from './contracts.js';
 import {humanAction,needsReview,setupInstructions,successNotice} from './onboarding.js';
 import {esc,page,login,home,roomView,agentView,hidden,json,codeEntry,existingCode} from './views.js';
@@ -38,6 +39,23 @@ export function createApp(c:Config, injected?:{rpc:(name:string,args:any)=>Promi
   if(result.error)throw new Error('database_rejected');
   if(result.data?.error)throw new Error(result.data.error);return result.data;
  });
+ const inviteCookie='__Host-deepend-invitation';
+ const pendingToken=(req:Request)=>{const v=parse(req.headers.cookie??'')[inviteCookie];return v&&/^[A-Za-z0-9_-]{43}$/.test(v)?v:undefined;};
+ const inviteSecret=(id:string)=>createHmac('sha256',c.secret).update('room-invite:'+id).digest('base64url');
+ const inviteLink=(id:string)=>c.humanOrigin+'/join#'+inviteSecret(id);
+ const invitation=async(req:Request,action:string,body:any={},authenticated=true)=>{
+  const r=await db.rpc('deepend_invitation',{p_action:action,p_hash:authenticated?hash(identity(req)):'',p_body:body,p_ip:ip(req)});
+  if(r.error)throw new Error('database_rejected');if(r.data?.error)throw new Error(r.data.error);return r.data;
+ };
+ const eligible=async(req:Request,email:string)=>!c.allowedEmails.length||c.allowedEmails.includes(email)||(await invitation(req,'eligible',{email,token_hash:pendingToken(req)?hash(pendingToken(req)!):''},false)).eligible;
+ const authDestination=(req:Request)=>pendingToken(req)?'/join/confirm':'/';
+ const mailInvitation=async(req:Request,id:string,attempt:string,resend=false)=>{
+  const claimed=await invitation(req,'email.claim',{id,attempt,resend:String(resend)});
+  if(!claimed.send)return;
+  let state='unknown';
+  try{const r=await auth.signInWithOtp({email:claimed.email,options:{emailRedirectTo:inviteLink(id)}});state=r.error?'failed':'sent';}catch{}
+  await invitation(req,'email.result',{id,attempt,state});
+ };
  const show=(res:Response,html:string)=>{
   const style=html.match(/<style>([\s\S]*?)<\/style>/)?.[1]??'';
   const scriptHashes=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m=>"'sha256-"+createHash('sha256').update(m[1]).digest('base64')+"'").join(' ');
@@ -60,7 +78,8 @@ export function createApp(c:Config, injected?:{rpc:(name:string,args:any)=>Promi
  app.get('/',async(req,res)=>{
   try{identity(req);}catch{return show(res,login(isAgent));}
   if(isAgent){const d=await call(req,'state');const e=await call(req,'events',{after:d.connection.cursor,limit:100});return show(res,agentView(d,e));}
-  show(res,home(await call(req,'home'),successNotice(req.query.saved)));
+  let data;try{data=await call(req,'home');}catch(e:any){if(e.message==='unauthorized')return show(res,login(false));throw e;}
+  show(res,home(data,successNotice(req.query.saved)));
  });
  app.get('/internal/maintenance',async(req,res)=>{
    if(!c.cronSecret||!timingSafeEqual(Buffer.from(hash(req.get('authorization')??'')),Buffer.from(hash('Bearer '+c.cronSecret)))){res.sendStatus(401);return;}
@@ -68,31 +87,82 @@ export function createApp(c:Config, injected?:{rpc:(name:string,args:any)=>Promi
    const r=await db.rpc('deepend_maintenance',{});if(r.error)throw new Error('database_rejected');res.json({ok:true});
   });
  if(!isAgent){
+  app.get('/join',(_req,res)=>show(res,joinLanding()));
+  app.post('/join/open',async(req,res)=>{
+   const value=z.string().regex(/^[A-Za-z0-9_-]{43}$/).parse(req.body.token);
+   await invitation(req,'context',{token_hash:hash(value)},false);
+   res.setHeader('Set-Cookie',stringifySetCookie({name:inviteCookie,value,httpOnly:true,secure:true,sameSite:'lax',path:'/',maxAge:7*86400}));
+   res.redirect(303,'/join/confirm');
+  });
+  app.get('/join/confirm',async(req,res)=>{
+   const value=pendingToken(req);if(!value)throw new Error('invalid_invitation');
+   const token_hash=hash(value),inv=await invitation(req,'context',{token_hash},false);
+   let signed:any;try{signed=await call(req,'home');}catch(e:any){if(e.message!=='unauthorized')throw e;}
+   if(!signed)return show(res,codeEntry(inv.email,false,'Sign in to review your invitation to '+inv.title+'. Use the code in the invitation email, or request a new one below.'));
+   if(signed.email.toLowerCase()!==inv.email)return show(res,page('Use your invited email',`<p>This invitation is for ${esc(inv.email)}. You’re signed in as ${esc(signed.email)}.</p><form method="post" action="/logout"><button>Sign out and use the invited email</button></form>`));
+   show(res,joinConfirmation({...inv,token_hash},signed.email));
+  });
+  app.post('/join/accept',async(req,res)=>{
+   const value=pendingToken(req);if(!value||req.body.token_hash!==hash(value))throw new Error('invalid_invitation');
+   const joined=await invitation(req,'accept',{token_hash:hash(value)});
+   res.setHeader('Set-Cookie',stringifySetCookie({name:inviteCookie,value:'',httpOnly:true,secure:true,sameSite:'lax',path:'/',maxAge:0}));
+   res.redirect(303,'/room/'+joined.room_id+'/connect');
+  });
+  app.post('/invitations/create',async(req,res)=>{
+   const b=z.object({id:z.string().uuid(),room_id:z.string().uuid(),email:z.string().trim().email().max(254).transform(v=>v.toLowerCase()),fresh_room:z.enum(['true','false']).default('false')}).parse(req.body);
+   const inv=await invitation(req,'create',{...b,token_hash:hash(inviteSecret(b.id))});
+   // Creation is durable even if the email service fails. The room lists its link/status.
+   try{await mailInvitation(req,inv.id,b.id);}catch(e:any){if(!['rate_limited','invalid_invitation'].includes(e.message))throw e;}
+   res.redirect(303,'/room/'+b.room_id+'#invitations');
+  });
+  app.post('/invitations/send',async(req,res)=>{
+   const id=z.string().uuid().parse(req.body.id),attempt=z.string().uuid().parse(req.body.attempt),room=z.string().uuid().parse(req.body.room_id);
+   await mailInvitation(req,id,attempt,true);res.redirect(303,'/room/'+room+'#invitations');
+  });
+  app.post('/invitations/revoke',async(req,res)=>{
+   const id=z.string().uuid().parse(req.body.id),room=z.string().uuid().parse(req.body.room_id);
+   await invitation(req,'revoke',{id});res.redirect(303,'/room/'+room+'#invitations');
+  });
+  app.get('/room/:id/connection/:connectionId',async(req,res)=>{
+   const room_id=z.string().uuid().parse(req.params.id),id=z.string().uuid().parse(req.params.connectionId),h=await call(req,'home'),d=await call(req,'state',{room_id});
+   const connection=d.connections.find((x:any)=>x.id===id&&x.human_id===h.human_id&&x.active);if(!connection)throw new Error('not_found');
+   const ready=!!connection.last_seen;
+   const html=page(ready?'Agent connected':'Waiting for your agent',`<p>${esc(connection.name)} ${ready?'has connected to Deepend. Confirm its hello message and group delivery in your agent chat.':'has not checked in yet. Paste the instructions first, then provide the credential through its secure entry flow.'}</p><p>${d.contact_id===id?'This is your selected contact for the group conversation.':'This agent is a contributor. Choose a contact in room settings to receive the group discussion.'}</p><a class="button" href="/room/${room_id}">Back to room</a>${ready?'':'<p>This page checks again every five seconds. If the activation credential expires, use Reconnect in room settings.</p>'}`);
+   show(res,ready?html:html.replace('</head>','<meta http-equiv="refresh" content="5"></head>'));
+  });
+  app.get('/room/:id/connect',async(req,res)=>{const room_id=z.string().uuid().parse(req.params.id),h=await call(req,'home');show(res,connectPage(await call(req,'state',{room_id}),h.human_id));});
   app.get('/auth/code',(_req,res)=>show(res,existingCode()));
   app.get('/reauth',(_req,res)=>show(res,login(false)));
   app.post('/auth/send',async(req,res)=>{
    await call(req,'auth.rate',{},null,'public','');const email=z.string().trim().email().max(254).parse(req.body.email).toLowerCase();
-   if(c.allowedEmails.length&&!c.allowedEmails.includes(email))throw new Error('enrollment_closed');
-   const {error}=await auth.signInWithOtp({email});if(error)throw new Error('email_not_sent');
+   if(!await eligible(req,email))throw new Error('enrollment_closed');
+   const invite=pendingToken(req);
+   const {error}=await auth.signInWithOtp({email,...(invite?{options:{emailRedirectTo:c.humanOrigin+'/join#'+invite}}:{})});if(error)throw new Error('email_not_sent');
    show(res,codeEntry(email));
   });
   app.post('/auth/verify',async(req,res)=>{
    await call(req,'auth.rate',{},null,'public','');const email=z.string().trim().email().max(254).parse(req.body.email).toLowerCase(),code=z.string().trim().regex(/^\d{6,10}$/).parse(req.body.code);
-   if(c.allowedEmails.length&&!c.allowedEmails.includes(email))throw new Error('enrollment_closed');
+   if(!await eligible(req,email))throw new Error('enrollment_closed');
    const {data,error}=await auth.verifyOtp({email,token:code,type:'email'});if(error||!data.user?.id||!data.session){
     // A second submission can arrive after the first has consumed the one-use code.
     // Recognize an existing same-account session without renewing its freshness.
     let signedIn=false;
     try{signedIn=(await call(req,'home')).email===email;}catch{}
+    if(signedIn&&pendingToken(req))return res.redirect(303,'/join/confirm');
     if(signedIn)return show(res,page('You’re already signed in','<p>Your existing sign-in is active. This code could not be used again.</p><a class="button" href="/">Continue to Deepend</a><p>If you were verifying your identity for a protected action, request a new code.</p><a href="/reauth">Get a new code</a>'));
     res.status(409);return show(res,codeEntry(email,true));
    }
    const session=token();const saved=await db.rpc('deepend_login',{p_id:data.user.id,p_email:data.user.email,p_hash:hash(session)});if(saved.error)throw new Error('database_rejected');
-   setCookie(res,session,86400);res.redirect(303,'/');
+   setCookie(res,session,86400);res.redirect(303,authDestination(req));
   });
-  app.post('/logout',async(req,res)=>{await call(req,'logout',{},randomUUID());setCookie(res,'',0);res.redirect(303,'/');});
+  app.post('/logout',async(req,res)=>{await call(req,'logout',{},randomUUID());setCookie(res,'',0);res.redirect(303,authDestination(req));});
   app.get('/hook-pairings/:id',async(req,res)=>{const pairing_id=z.string().uuid().parse(req.params.id);show(res,pairingPage(await hookCall(req)('owner.get',{pairing_id},true),c.agentOrigin));});
-  app.get('/room/:id',async(req,res)=>{const room_id=z.string().uuid().parse(req.params.id);const h=await call(req,'home');show(res,roomView(await call(req,'state',{room_id}),h.human_id,successNotice(req.query.saved),pairingList((await hookCall(req)('owner.list',{room_id},true)).pairings)));});
+  app.get('/room/:id',async(req,res)=>{
+   const room_id=z.string().uuid().parse(req.params.id),h=await call(req,'home'),d=await call(req,'state',{room_id});
+   const admin=d.members.some((m:any)=>m.human_id===h.human_id&&m.role==='admin'&&m.status==='active');
+   const invites=admin?invitationForm(room_id)+invitationList((await invitation(req,'list',{room_id})).invitations,inviteLink,room_id):'';
+   show(res,roomView(d,h.human_id,successNotice(req.query.saved),pairingList((await hookCall(req)('owner.list',{room_id},true)).pairings),invites));
+  });
   app.get('/export/:id',async(req,res)=>{const room_id=z.string().uuid().parse(req.params.id);res.attachment('deepend-room.json').json(await call(req,'room.export',{room_id}));});
  }else{
   app.post('/activate',async(req,res)=>{
@@ -159,10 +229,11 @@ export function createApp(c:Config, injected?:{rpc:(name:string,args:any)=>Promi
  app.use((_req,res)=>res.status(404).send('Not found'));
  app.use((err:any,req:Request,res:Response,_next:NextFunction)=>{
   const code=err instanceof z.ZodError?'invalid_input':err.message??'internal_error';
-  const safe=new Set(['replay_detected','source_message_required','delivery_required','invalid_input','unauthorized','forbidden','not_found','rate_limited','reauthenticate','invalid_code','invalid_activation','email_not_sent','enrollment_closed','database_rejected','request_conflict','invalid_operation','paused','human_input_required','lease_busy','stale_lease','not_contact','delivery_reconciliation_required','reconcile_before_retry','invalid_invitation','already_member','invalid_state','invalid_cursor','member_limit','admin_transfer_required']);
+  const safe=new Set(['invitation_email_mismatch','replay_detected','source_message_required','delivery_required','invalid_input','unauthorized','forbidden','not_found','rate_limited','reauthenticate','invalid_code','invalid_activation','email_not_sent','enrollment_closed','database_rejected','request_conflict','invalid_operation','paused','human_input_required','lease_busy','stale_lease','not_contact','delivery_reconciliation_required','reconcile_before_retry','invalid_invitation','already_member','invalid_state','invalid_cursor','member_limit','admin_transfer_required']);
   const out=safe.has(code)?code:'request_rejected';const status=out==='rate_limited'?429:['unauthorized','reauthenticate'].includes(out)?401:out==='forbidden'?403:out==='not_found'?404:out==='database_rejected'?503:409;
   if(status===429)res.setHeader('Retry-After','60');res.status(status);
   if(req.path.startsWith('/v1/'))res.json({code:out,message:out.replaceAll('_',' '),...(status===429?{retry_after_seconds:60}:{})});
+  else if(out==='invalid_invitation')show(res,page('Invitation unavailable','<p>This invitation has expired, was revoked, or is no longer valid. Ask the room administrator for a new invitation.</p><a href="/">Go to Deepend</a>'));
   else show(res,page('Action needs attention',`<p>${esc(out.replaceAll('_',' '))}</p>${out==='reauthenticate'?'<p>Verify a new email code, then return to this saved review form.</p><a href="/reauth">Verify identity</a>':'<a href="/">Return to Deepend</a>'}${res.locals.retryUrl?'<p><a href="'+esc(res.locals.retryUrl)+'">Return to your saved action</a> to retry without creating a duplicate.</p>':''}`,isAgent));
  });
  return app;

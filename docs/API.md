@@ -99,3 +99,18 @@ is 429 with Retry-After. Signed status and both wake routes share six checks/min
 per connection. Approval lasts 90 days; normal credential expiry, connection removal
 or credential rotation also blocks signed wake. Registration expires in ten minutes.
 Private keys are never stored on the server.
+
+
+## Email-bound human invitations
+
+The website now uses email-specific invitations: see [configuration and acceptance
+checks](email/INVITATIONS.md). The server-only `deepend_invitation` RPC handles
+creation, listing, email claims/results, expiry/revocation, eligibility and acceptance.
+Agent credentials cannot use it. Legacy `invite.create` / `invite.accept` codes retain
+their original two-stage rules; new email invitations become active on the invited
+human’s authenticated confirmation. No global allowlist mutation occurs.
+
+`connection.create` accepts optional `use_as_contact: "true"`. It selects the new
+connection only when no contact exists and no unresolved native send would be
+displaced. Routine creation uses the current valid human session; rotation and
+other sensitive changes still require fresh authentication.
