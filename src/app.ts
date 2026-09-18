@@ -6,7 +6,7 @@ import {z} from 'zod';
 import {registerHook,signedHook,pairingPage,pairingList} from './hooks.js';
 import {operations,reads,validate} from './contracts.js';
 import {humanAction,needsReview,setupInstructions,successNotice} from './onboarding.js';
-import {esc,page,login,home,roomView,agentView,hidden,json,codeEntry} from './views.js';
+import {esc,page,login,home,roomView,agentView,hidden,json,codeEntry,existingCode} from './views.js';
 export const hash=(v:string)=>createHash('sha256').update(v).digest('hex');
 const token=()=>randomBytes(32).toString('base64url');
 export interface Config {surface:'human'|'agent';humanOrigin:string;agentOrigin:string;supabaseUrl:string;publicKey:string;serviceKey:string;secret:string;allowedEmails:string[];cronSecret?:string}
@@ -68,6 +68,7 @@ export function createApp(c:Config, injected?:{rpc:(name:string,args:any)=>Promi
    const r=await db.rpc('deepend_maintenance',{});if(r.error)throw new Error('database_rejected');res.json({ok:true});
   });
  if(!isAgent){
+  app.get('/auth/code',(_req,res)=>show(res,existingCode()));
   app.get('/reauth',(_req,res)=>show(res,login(false)));
   app.post('/auth/send',async(req,res)=>{
    await call(req,'auth.rate',{},null,'public','');const email=z.string().trim().email().max(254).parse(req.body.email).toLowerCase();
