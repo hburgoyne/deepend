@@ -1,6 +1,8 @@
 # Direct Supabase / Vercel deployment
 
-Use a **fresh Supabase project**. This release does not migrate a live prototype database. Preserve any wanted prototype data privately before retiring that instance.
+For a new installation, use a fresh Supabase project and apply all migrations in order.
+For the existing pilot's domain change, keep its database and follow
+[the custom domain migration plan](CUSTOM_DOMAIN.md).
 
 ## 1. Database and human authentication
 
@@ -37,7 +39,9 @@ Keep production application routes reachable without Vercel's interactive deploy
 ## 3. First room and real canary
 
 1. Open the human origin; request and enter your email code. Create a room.
-2. Create an invitation code and send it privately to the second person. They sign in and submit it; you confirm their displayed identity. Until confirmation they have no room access.
+2. Invite the second person by email. They sign in with that email and confirm Join;
+   membership activates immediately. Configure both email templates and test delivery
+   using [INVITATIONS.md](email/INVITATIONS.md).
 3. Create Muse A, Muse B and Instinct B under the correct owners. Instinct automatically gets browser activation; other platforms get API credentials. Each credential screen includes a secret-free setup prompt. Use the platform's secure input for the credential itself.
 4. Follow the connector instructions. Select one contact per person. Review the saved mutation before confirming; the stable review form is also the retry path after timeout.
 5. Test one read, one posted message and its read-back on each agent; then schedule five-minute polling under native standing permissions. Test with apps closed and secondary agents silent.

@@ -20,13 +20,17 @@ test('scoped API hashes credentials, ignores sender fields and validates stable 
  assert.equal((await request('agent','POST','/v1/message',{authorization},{body:'Hello'})).status,409);
  assert.throws(()=>validate('task.update',{task_id:id,state:'done'}));
 });
-test('public surface is only login; authenticated data is no-store and inert',async()=>{
+test('public home explains the product; login and authenticated data stay private',async()=>{
  const r=await request('human','GET','/');assert.equal(r.status,200);assert.match(String(r.headers['cache-control']),/no-store/);assert.match(String(r.headers['content-security-policy']),/default-src 'none'/);
  // no-referrer makes browsers send Origin: null on same-origin form posts, which the origin check rejects.
  assert.equal(r.headers['referrer-policy'],'same-origin');assert.equal(r.calls.length,0);
+ assert.match(r.body,/Throw your agents/);assert.match(r.body,/href="\/login"/);assert.equal(r.headers['x-robots-tag'],'index, follow');
+ const signIn=await request('human','GET','/login');assert.match(signIn.body,/action="\/auth\/send"/);assert.equal(signIn.headers['x-robots-tag'],'noindex, nofollow');
+ const agent=await request('agent','GET','/');assert.match(agent.body,/Activate connection/);assert.doesNotMatch(agent.body,/Throw your agents/);
  const x=await request('human','GET','/',{cookie:'__Host-deepend-human=owner'}, {},{email:'<script>alert(1)</script>',rooms:[]});
  assert.match(x.body,/&lt;script&gt;/);assert.doesNotMatch(x.body,/<script>/);
  assert.doesNotMatch(x.body,/secret-service-key/);
+ assert.equal(x.headers['x-robots-tag'],'noindex, nofollow');
 });
 test('agent activation stores only a scoped host cookie; no session secret returned',async()=>{
  const r=await request('agent','POST','/activate',{origin:config.agentOrigin},{token:'a'.repeat(43)},{connection_id:'c'});
@@ -102,5 +106,5 @@ test('email-code form keeps recovery on-page and uses passwordless autofill hint
  assert.match(String(sent.headers['content-security-policy']),/script-src 'sha256-/);
  const failed=await request('human','POST','/auth/verify',{origin:config.humanOrigin},{email:'owner@example.test',code:' 123456 '},{ok:true},{verifyOtp:async({token}:any)=>{assert.equal(token,'123456');return {data:{},error:{code:'otp_expired'}};}});
  assert.equal(failed.status,409);assert.match(failed.body,/Send a new code/);assert.match(failed.body,/owner@example.test/);assert.doesNotMatch(failed.body,/value="123456"/);
- const login=await request('human','GET','/');assert.match(login.body,/autocomplete="email" inputmode="email"/);
+ const login=await request('human','GET','/login');assert.match(login.body,/autocomplete="email" inputmode="email"/);
 });

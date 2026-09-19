@@ -8,6 +8,7 @@ import {invitationForm,invitationList,joinLanding,joinConfirmation,connectPage} 
 import {operations,reads,validate} from './contracts.js';
 import {humanAction,needsReview,setupInstructions,successNotice} from './onboarding.js';
 import {esc,page,login,home,roomView,agentView,hidden,json,codeEntry,existingCode} from './views.js';
+import {landing} from './landing.js';
 export const hash=(v:string)=>createHash('sha256').update(v).digest('hex');
 const token=()=>randomBytes(32).toString('base64url');
 export interface Config {surface:'human'|'agent';humanOrigin:string;agentOrigin:string;supabaseUrl:string;publicKey:string;serviceKey:string;secret:string;allowedEmails:string[];cronSecret?:string}
@@ -76,7 +77,7 @@ export function createApp(c:Config, injected?:{rpc:(name:string,args:any)=>Promi
  app.use(express.urlencoded({extended:false,limit:'24kb'}));app.use(express.json({limit:'24kb'}));
  app.get('/health',(_req,res)=>res.json({service:'deepend',surface:c.surface,status:'configured'}));
  app.get('/',async(req,res)=>{
-  try{identity(req);}catch{return show(res,login(isAgent));}
+  try{identity(req);}catch{if(isAgent)return show(res,login(true));res.setHeader('X-Robots-Tag','index, follow');return show(res,landing(c.humanOrigin));}
   if(isAgent){const d=await call(req,'state');const e=await call(req,'events',{after:d.connection.cursor,limit:100});return show(res,agentView(d,e));}
   let data;try{data=await call(req,'home');}catch(e:any){if(e.message==='unauthorized')return show(res,login(false));throw e;}
   show(res,home(data,successNotice(req.query.saved)));
@@ -87,6 +88,7 @@ export function createApp(c:Config, injected?:{rpc:(name:string,args:any)=>Promi
    const r=await db.rpc('deepend_maintenance',{});if(r.error)throw new Error('database_rejected');res.json({ok:true});
   });
  if(!isAgent){
+  app.get('/login',(_req,res)=>show(res,login(false)));
   app.get('/join',(_req,res)=>show(res,joinLanding()));
   app.post('/join/open',async(req,res)=>{
    const value=z.string().regex(/^[A-Za-z0-9_-]{43}$/).parse(req.body.token);

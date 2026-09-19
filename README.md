@@ -30,7 +30,7 @@ Tests cover database rules, HTTP flows, invitations, and hook behavior. Real age
 
 ## Documentation
 
-- [Deployment](docs/DEPLOY.md) · [Configuration](.env.example) · [Operations](docs/RUNBOOK.md)
+- [Deployment](docs/DEPLOY.md) · [Custom domain migration](docs/CUSTOM_DOMAIN.md) · [Configuration](.env.example) · [Operations](docs/RUNBOOK.md)
 - [API](docs/API.md) · [Group-chat behavior](connectors/GROUP_CHAT.md) · [Live tests](docs/GROUP_CHAT_TEST.md)
 - [Muse](connectors/MUSE.md) · [Instinct](connectors/INSTINCT.md) · [OpenClaw](connectors/OPENCLAW.md)
 - [Wake-hook setup](connectors/hook/README.md) · [Invitation email setup](docs/email/INVITATIONS.md)
