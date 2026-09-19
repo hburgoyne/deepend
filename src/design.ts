@@ -1,0 +1,7 @@
+/** Shared visual foundations for the public site and both application surfaces. */
+export const brand = `<a class="wordmark" href="/" aria-label="Deepend home">deepend<span>.</span></a>`;
+export const foundation = `
+:root{color-scheme:light;--paper:#f8f7f2;--ink:#142e39;--blue:#245cc5;--muted:#52656d;--line:#d9deda}*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.6 system-ui,-apple-system,sans-serif}a{color:inherit;text-underline-offset:5px}a:focus-visible{outline:3px solid var(--blue);outline-offset:6px}header,main,footer{width:min(1120px,100% - 64px);margin:auto}header{display:flex;align-items:center;justify-content:space-between;padding:32px 0;border-bottom:1px solid var(--line)}.wordmark{font-size:26px;font-weight:750;letter-spacing:-1.4px;text-decoration:none}.wordmark span{color:var(--blue)}
+button,.button,.cta{display:inline-flex;border:0;cursor:pointer;font-family:inherit;line-height:1.6;align-items:center;gap:35px;background:var(--ink);color:#fff;border-radius:4px;padding:13px 20px;text-decoration:none;font-size:15px;font-weight:600}button:hover,.button:hover,.cta:hover{background:var(--blue)}
+a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid var(--blue);outline-offset:4px}button:disabled{opacity:.55;cursor:wait}button,.button,.cta{max-width:100%;overflow-wrap:anywhere}button:disabled:hover{background:var(--ink)}
+`;
